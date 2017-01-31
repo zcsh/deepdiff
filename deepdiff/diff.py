@@ -13,13 +13,14 @@ from __future__ import print_function
 import difflib
 import logging
 import jsonpickle
+import jsonpickle.ext.numpy as jsonpickle_numpy
 
 from decimal import Decimal
 
 from collections import Mapping
 from collections import Iterable
 
-from deepdiff.helper import py3, strings, numbers, ListItemRemovedOrAdded, IndexedHash, Verbose
+from deepdiff.helper import py3, strings, numbers, ListItemRemovedOrAdded, IndexedHash, Verbose, JsonEncoder
 from deepdiff.model import RemapDict, ResultDict, TextResult, TreeResult, DiffLevel
 from deepdiff.model import DictRelationship, AttributeRelationship  # , REPORT_KEYS
 from deepdiff.model import SubscriptableIterableRelationship, NonSubscriptableIterableRelationship, SetRelationship
@@ -31,6 +32,7 @@ else:  # pragma: no cover
     from itertools import izip_longest as zip_longest
 
 logger = logging.getLogger(__name__)
+jsonpickle_numpy.register_handlers()
 
 
 class DeepDiff(ResultDict):
@@ -585,18 +587,38 @@ class DeepDiff(ResultDict):
 
     **Serialization**
 
-    DeepDiff uses jsonpickle in order to serialize and deserialize its results into json.
+    Option 1: json(safe but only text view)
+
+    This option gives you a safe json serialization. It is way safer and more compact than option 2, however it only keeps the text view.
 
     Serialize and then deserialize back to deepdiff
         >>> t1 = {1: 1, 2: 2, 3: 3}
         >>> t2 = {1: 1, 2: "2", 3: 3}
         >>> ddiff = DeepDiff(t1, t2)
-        >>> jsoned = ddiff.json
+        >>> jsoned = ddiff.json()
         >>> jsoned
-        '{"type_changes": {"root[2]": {"py/object": "deepdiff.helper.RemapDict", "new_type": {"py/type": "__builtin__.str"}, "new_value": "2", "old_type": {"py/type": "__builtin__.int"}, "old_value": 2}}}'
+        ''
         >>> ddiff_new = DeepDiff.from_json(jsoned)
         >>> ddiff == ddiff_new
         True
+
+    Option 2: jsonpickle(unsafe but includes the tree view)
+
+    Using jsonpickle deepddif can serialize and deserialize its results into json.
+    JSONPICKLE IS NOT SAFE AND CAN RUN ARBITRARY CODE when deserializing your data.
+    If you can not trust your data, please consider using option1: json
+
+    Serialize and then deserialize back to deepdiff
+        >>> t1 = {1: 1, 2: 2, 3: 3}
+        >>> t2 = {1: 1, 2: "2", 3: 3}
+        >>> ddiff = DeepDiff(t1, t2)
+        >>> jsoned = ddiff.json(unsafe=True)
+        >>> jsoned
+        '{"type_changes": {"root[2]": {"py/object": "deepdiff.helper.RemapDict", "new_type": {"py/type": "__builtin__.str"}, "new_value": "2", "old_type": {"py/type": "__builtin__.int"}, "old_value": 2}}}'
+        >>> ddiff_new = DeepDiff.from_json(jsoned, unsafe=True)
+        >>> ddiff == ddiff_new
+        True
+
 
     **Pycon 2016 Talk**
     I gave a talk about how DeepDiff does what it does at Pycon 2016.
@@ -1092,22 +1114,24 @@ class DeepDiff(ResultDict):
 
         return
 
-    @property
-    def json(self):
-        if not hasattr(self, '_json'):
-            # copy of self removes all the extra attributes since it assumes
-            # we have only a simple dictionary.
+    def json(self, unsafe=False):
+        # copy of self removes all the extra attributes since it assumes
+        # we have only a simple dictionary.
+        if unsafe:
             copied = self.copy()
-            self._json = jsonpickle.encode(copied)
-        return self._json
-
-    @json.deleter
-    def json(self):
-        del self._json
+            result = jsonpickle.encode(copied)
+        else:
+            # TODO: it has to be the text view?
+            result = json.dumps(cls=JsonEncoder)
+        return result
 
     @classmethod
-    def from_json(self, value):
-        return jsonpickle.decode(value)
+    def from_json(self, value, unsafe=False):
+        if unsafe:
+            result = jsonpickle.decode(value)
+        else:
+            result = json.loads(value)
+            return result
 
 
 if __name__ == "__main__":  # pragma: no cover

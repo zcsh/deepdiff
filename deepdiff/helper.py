@@ -3,6 +3,7 @@ import sys
 import datetime
 from decimal import Decimal
 from collections import namedtuple
+import json
 import logging
 
 logger = logging.getLogger(__name__)
@@ -94,3 +95,22 @@ class Verbose(object):
     Global verbose level
     """
     level = 1
+
+
+class JsonEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, (set, frozenset)):
+            result = list(obj)
+        elif isinstance(obj, complex):
+            result = [obj.real, obj.imag]
+        elif isinstance(obj, datetime.datetime):
+            return obj.isoformat()
+        elif isinstance(obj, datetime.date):
+            return obj.isoformat()
+        elif isinstance(obj, datetime.timedelta):
+            return (datetime.datetime.min + obj).time().isoformat()
+        elif isinstance(obj, Decimal):
+            result = float(obj)
+        else:
+            result = super(JsonEncoder, self).default(obj)
+        return result
