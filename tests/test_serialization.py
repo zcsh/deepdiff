@@ -33,27 +33,28 @@ class DeepAdditionsTestCase(unittest.TestCase):
         t1 = {1: 1, 2: 2, 3: 3, 4: {"a": "hello", "b": [1, 2, 3]}}
         t2 = {1: 1, 2: 2, 3: 3, 4: {"a": "hello", "b": "world\n\n\nEnd"}}
         ddiff = DeepDiff(t1, t2)
-        self.assertTrue("deepdiff.helper.RemapDict" in ddiff.json(unsafe=True))
+        self.assertTrue(ddiff.to_json(unsafe=True), ddiff.json)
+        self.assertTrue("deepdiff.helper.RemapDict" in ddiff.to_json(unsafe=True))
 
     def test_jsonpickle_deserialization(self):
         t1 = {1: 1, 2: 2, 3: 3, 4: {"a": "hello", "b": [1, 2, 3]}}
         t2 = {1: 1, 2: 2, 3: 3, 4: {"a": "hello", "b": "world\n\n\nEnd"}}
         ddiff = DeepDiff(t1, t2)
-        jsoned = ddiff.json(unsafe=True)
-        ddiff2 = DeepDiff.from_json(jsoned)
+        jsoned = ddiff.to_json(unsafe=True)
+        ddiff2 = DeepDiff.from_json(jsoned, unsafe=True)
         self.assertEqual(ddiff, ddiff2)
 
     def test_jsonpickle_serialization_tree(self):
         t1 = {1: 1, 2: 2, 3: 3, 4: {"a": "hello", "b": [1, 2, 3]}}
         t2 = {1: 1, 2: 2, 3: 3, 4: {"a": "hello", "b": "world\n\n\nEnd"}}
         ddiff = DeepDiff(t1, t2, view='tree')
-        jsoned = ddiff.json(unsafe=True)
+        jsoned = ddiff.to_json(unsafe=True)
         self.assertTrue("world" in jsoned)
 
     def test_jsonpickle_deserialization_tree(self):
         t1 = {1: 1, 2: 2, 3: 3, 4: {"a": "hello", "b": [1, 2, 3]}}
         t2 = {1: 1, 2: 2, 3: 3, 4: {"a": "hello", "b": "world\n\n\nEnd"}}
         ddiff = DeepDiff(t1, t2, view='tree')
-        jsoned = ddiff.json(unsafe=True)
-        ddiff2 = DeepDiff.from_json(jsoned)
+        jsoned = ddiff.to_json(unsafe=True)
+        ddiff2 = DeepDiff.from_json(jsoned, unsafe=True)
         self.assertTrue('type_changes' in ddiff2)

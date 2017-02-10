@@ -44,8 +44,6 @@ class DeepHash(dict):
     **DeepHash**
     """
 
-    show_warning = True
-
     def __init__(self,
                  obj,
                  hashes=None,

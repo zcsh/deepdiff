@@ -10,7 +10,7 @@ from collections import Iterable
 from collections import MutableMapping
 import logging
 
-from deepdiff.helper import py3, strings, numbers, items
+from deepdiff.helper import py3, strings, numbers, items, warn
 
 logger = logging.getLogger(__name__)
 
@@ -68,8 +68,6 @@ class DeepSearch(dict):
                               "root[1]['long']": 'somewhere'}}
 
     """
-
-    warning_num = 0
 
     def __init__(self,
                  obj,
@@ -260,12 +258,9 @@ class DeepSearch(dict):
             self.__search_tuple(obj, item, parent, parents_ids)
 
         elif isinstance(obj, (set, frozenset)):
-            if self.warning_num < 10:
-                logger.warning(
-                    "Set item detected in the path."
-                    "'set' objects do NOT support indexing. But DeepSearch will still report a path."
-                )
-                self.warning_num += 1
+            warn(
+                "Set item detected in the path. 'set' objects do NOT support indexing. But DeepSearch will still report a path."
+            )
             self.__search_iterable(obj, item, parent, parents_ids)
 
         elif isinstance(obj, Iterable):

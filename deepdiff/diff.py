@@ -20,7 +20,8 @@ from decimal import Decimal
 from collections import Mapping
 from collections import Iterable
 
-from deepdiff.helper import py3, strings, numbers, ListItemRemovedOrAdded, IndexedHash, Verbose, JsonEncoder
+from deepdiff.helper import (py3, strings, numbers, ListItemRemovedOrAdded,
+                             IndexedHash, Verbose, JsonEncoder, warn)
 from deepdiff.model import RemapDict, ResultDict, TextResult, TreeResult, DiffLevel
 from deepdiff.model import DictRelationship, AttributeRelationship  # , REPORT_KEYS
 from deepdiff.model import SubscriptableIterableRelationship, NonSubscriptableIterableRelationship, SetRelationship
@@ -629,8 +630,6 @@ class DeepDiff(ResultDict):
 
     """
 
-    show_warning = True
-
     def __init__(self,
                  t1,
                  t2,
@@ -962,14 +961,10 @@ class DeepDiff(ResultDict):
                                       significant_digits=self.significant_digits)
                 item_hash = hashes_all.get(id(item), item)
             except Exception as e:  # pragma: no cover
-                logger.warning("Can not produce a hash for %s."
-                               "Not counting this object.\n %s" %
-                               (level.path(), e))
+                warn("Can not produce a hash for %s. Not counting this object.\n %s" % (level.path(), e))
             else:
                 if item_hash is hashes_all.unprocessed:  # pragma: no cover
-                    logger.warning("Item %s was not processed while hashing "
-                                   "thus not counting this object." %
-                                   level.path())
+                    warn("Item %s was not processed while hashing thus not counting this object." % level.path())
                 else:
                     add_hash(hashes, item_hash, item, i)
         return hashes
@@ -1114,7 +1109,12 @@ class DeepDiff(ResultDict):
 
         return
 
-    def json(self, unsafe=False):
+    @property
+    def json(self):
+        logger.warning("DeepDiff.json is deprecated. Please use to_json(unsafe=True) to get the same results instead.")
+        return self.to_json(unsafe=True)
+
+    def to_json(self, unsafe=False):
         # copy of self removes all the extra attributes since it assumes
         # we have only a simple dictionary.
         if unsafe:
@@ -1130,8 +1130,10 @@ class DeepDiff(ResultDict):
         if unsafe:
             result = jsonpickle.decode(value)
         else:
+            if "deepdiff.helper.RemapDict" in value:
+                logger.warning("JsonPickle serialization detected. You might need to run from_json(unsafe=False) to deserialize.")
             result = json.loads(value)
-            return result
+        return result
 
 
 if __name__ == "__main__":  # pragma: no cover
