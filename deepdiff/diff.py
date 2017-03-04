@@ -630,11 +630,25 @@ class DeepDiff(ResultDict):
 
         self.ignore_order = ignore_order
         self.report_repetition = report_repetition
-        self.exclude_paths = set(exclude_paths)
-        self.exclude_regex_paths = [re.compile(exclude_regex_path) for exclude_regex_path in set(exclude_regex_paths)]
-        self.exclude_types = set(exclude_types)
-        self.exclude_types_tuple = tuple(
-            exclude_types)  # we need tuple for checking isinstance
+
+        # Accept exclude paths (will not diff objects at those locations)
+        if isinstance(exclude_paths, (strings, re._pattern_type)):  # single exclude path w/o container?
+            self.exclude_paths = {exclude_paths}
+        else:
+            self.exclude_paths = set(exclude_paths)
+
+        # We'll separate exclude_paths into regexp- and non-regexp ones as comparing regular strings
+        # by hash is much cheaper. No need to even fire up the regexp engine if the feature is not used.
+        self.exclude_regex_paths = set()
+        for exclude_path in self.exclude_paths:
+            if isinstance(exclude_path, re._pattern_type):    # move over to regexp
+                self.exclude_regex_paths.add(exclude_path)
+        self.exclude_paths = self.exclude_paths - self.exclude_regex_paths
+
+
+        # Accept exclude types (will not diff objects of those types)
+        self.exclude_types = tuple(exclude_types)
+
         self.hashes = {}
 
         if significant_digits is not None and significant_digits < 0:
@@ -749,14 +763,15 @@ class DeepDiff(ResultDict):
         :rtype: bool
         """
         skip = False
-        if self.exclude_paths and level.path() in self.exclude_paths:
+        mypath = level.path()
+        if self.exclude_paths and mypath in self.exclude_paths:
             skip = True
         elif self.exclude_regex_paths and any(
-                [exclude_regex_path.match(level.path()) for exclude_regex_path in self.exclude_regex_paths]):
+                [exclude_regex_path.match(mypath) for exclude_regex_path in self.exclude_regex_paths]):
             skip = True
         else:
-            if isinstance(level.t1, self.exclude_types_tuple) or isinstance(
-                    level.t2, self.exclude_types_tuple):
+            if isinstance(level.t1, self.exclude_types) or isinstance(
+                    level.t2, self.exclude_types):
                 skip = True
 
         return skip

@@ -21,6 +21,7 @@ or using nosetests:
 """
 import unittest
 import datetime
+import re
 from decimal import Decimal
 from deepdiff import DeepDiff
 from deepdiff.helper import py3
@@ -1244,7 +1245,7 @@ class DeepDiffTextTestCase(unittest.TestCase):
             "ingredients": ["no meat", "no eggs", "no dairy"]
         }
         t2 = {"for life": "vegan"}
-        ddiff = DeepDiff(t1, t2, exclude_paths={"root['ingredients']"})
+        ddiff = DeepDiff(t1, t2, exclude_paths="root['ingredients']")
         self.assertEqual(ddiff, {})
 
     def test_skip_path2_reverse(self):
@@ -1297,10 +1298,31 @@ class DeepDiffTextTestCase(unittest.TestCase):
         result = {}
         self.assertEqual(ddiff, result)
 
-    def test_skip_regexp(self):
+    def test_skip_regex_result_empty(self):
         t1 = [{'a': 1, 'b': 2}, {'c': 4, 'b': 5}]
         t2 = [{'a': 1, 'b': 3}, {'c': 4, 'b': 5}]
-        ddiff = DeepDiff(t1, t2, exclude_regex_paths=["root\[\d+\]\['b'\]"])
+        ddiff = DeepDiff(t1, t2, exclude_paths=[re.compile("root\[\d+\]\['b'\]")])
+        result = {}
+        self.assertEqual(ddiff, result)
+
+    def test_skip_regex_result_not_empty(self):
+        t1 = [{'a': 1, 'b': 2}, {'c': 4, 'b': 5}]
+        t2 = [{'a': 1, 'b': 3}, {'c': 5, 'b': 5}]
+        ddiff = DeepDiff(t1, t2, exclude_paths=[re.compile("root\[\d+\]\['b'\]")])
+        result = {'values_changed': {"root[1]['c']": {'new_value': 5, 'old_value': 4}}}
+        self.assertEqual(ddiff, result)
+
+    def test_skip_regex_no_list(self):
+        t1 = [{'a': 1, 'b': 2}, {'c': 4, 'b': 5}]
+        t2 = [{'a': 1, 'b': 3}, {'c': 5, 'b': 5}]
+        ddiff = DeepDiff(t1, t2, exclude_paths=re.compile("root\[\d+\]\['b'\]"))
+        result = {'values_changed': {"root[1]['c']": {'new_value': 5, 'old_value': 4}}}
+        self.assertEqual(ddiff, result)
+
+    def test_skip_regex_mixed(self):
+        t1 = [{'a': 1, 'b': 2}, {'c': 4, 'b': 5}]
+        t2 = [{'a': 1, 'b': 3}, {'c': 5, 'b': 5}]
+        ddiff = DeepDiff(t1, t2, exclude_paths=["root[1]['c']", re.compile("root\[\d+\]\['b'\]")])
         result = {}
         self.assertEqual(ddiff, result)
 

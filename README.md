@@ -437,34 +437,6 @@ And if you would like to know the values of items added or removed, please set t
  'values_changed': {'root.b': {'new_value': 2, 'old_value': 1}}}
 ```
 
-### Exclude certain types from comparison:
-```python
->>> l1 = logging.getLogger("test")
->>> l2 = logging.getLogger("test2")
->>> t1 = {"log": l1, 2: 1337}
->>> t2 = {"log": l2, 2: 1337}
->>> print(DeepDiff(t1, t2, exclude_types={logging.Logger}))
-{}
-```
-
-### Exclude part of your object tree from comparison:
-```python
->>> t1 = {"for life": "vegan", "ingredients": ["no meat", "no eggs", "no dairy"]}
->>> t2 = {"for life": "vegan", "ingredients": ["veggies", "tofu", "soy sauce"]}
->>> print (DeepDiff(t1, t2, exclude_paths={"root['ingredients']"}))
-{}
-```
-
-You can also exclude regular expression:
-
-```python
->>> t1 = [{'a': 1, 'b': 2}, {'c': 4, 'b': 5}]
->>> t2 = [{'a': 1, 'b': 3}, {'c': 4, 'b': 5}]
->>> print (DeepDiff(t1, t2, exclude_regex_paths={"root\[\d+\]\['b'\]"}))
-{}
-```
-
-
     All the examples for the text view work for the tree view too. You just need to set view='tree' to get it in tree form.
 
 
