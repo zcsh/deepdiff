@@ -1333,6 +1333,36 @@ class DeepDiffTextTestCase(unittest.TestCase):
         result = {}
         self.assertEqual(ddiff, result)
 
+    def test_skip_path_dict_ignore_order(self):
+        t1 = {
+            "become": "vegan",
+            "remove": ["meat", "eggs", "dairy"],
+            "add": ["veggies", "tofu", "soy sauce"]
+        }
+        t2 = {
+            "become": "vegan",
+            "remove": ["dairy", "meat", "eggs", "fish"],
+            "add": ["veggies", "soy sauce", "tofu", "tempeh"]
+        }
+        ddiff = DeepDiff(t1, t2, exclude_paths={"root['remove']"}, ignore_order=True)
+        result = {'iterable_item_added': {"root['add'][3]": 'tempeh'}}
+        self.assertEqual(ddiff, result)
+
+    def test_skip_regex_dict_ignore_order(self):
+        t1 = {
+            "become": "vegan",
+            "remove": ["meat", "eggs", "dairy"],
+            "add": ["veggies", "tofu", "soy sauce"]
+        }
+        t2 = {
+            "become": "vegan",
+            "remove": ["dairy", "meat", "eggs", "fish"],
+            "add": ["veggies", "soy sauce", "tofu", "tempeh"]
+        }
+        ddiff = DeepDiff(t1, t2, exclude_paths={re.compile('.*remove.*')}, ignore_order=True)
+        result = {'iterable_item_added': {"root['add'][3]": 'tempeh'}}
+        self.assertEqual(ddiff, result)
+
     def test_unknown_parameters(self):
         with self.assertRaises(ValueError):
             DeepDiff(1, 1, wrong_param=2)
