@@ -21,6 +21,7 @@ from collections import Mapping
 from collections import Iterable
 
 from deepdiff.helper import py3, strings, numbers, ListItemRemovedOrAdded, NotPresentHere, IndexedHash, Verbose
+from deepdiff.base import DeepBase
 from deepdiff.model import RemapDict, ResultDict, TextResult, TreeResult, DiffLevel
 from deepdiff.model import DictRelationship, AttributeRelationship  # , REPORT_KEYS
 from deepdiff.model import SubscriptableIterableRelationship, NonSubscriptableIterableRelationship, SetRelationship
@@ -34,7 +35,7 @@ else:  # pragma: no cover
 logger = logging.getLogger(__name__)
 
 
-class DeepDiff(ResultDict):
+class DeepDiff(DeepBase, ResultDict):
     r"""
     **DeepDiff**
 
@@ -627,10 +628,11 @@ class DeepDiff(ResultDict):
                 "The following parameter(s) are not valid: %s\n"
                 "The valid parameters are ignore_order, report_repetition, significant_digits,"
                 "exclude_paths, exclude_types, verbose_level and view.") % ', '.join(kwargs.keys()))
-
+        
+        DeepBase.__init__(self, exclude_paths, exclude_types)
+        
         self.ignore_order = ignore_order
         self.report_repetition = report_repetition
-        self.__initialize_exclude(exclude_paths, exclude_types)
         self.hashes = {}
 
         if significant_digits is not None and significant_digits < 0:
@@ -657,45 +659,6 @@ class DeepDiff(ResultDict):
                 result_text
             )  # be compatible to DeepDiff 2.x if user didn't specify otherwise
 
-    def __initialize_exclude(self, exclude_paths, exclude_types):
-        self.exclude_types = tuple(exclude_types)
-
-        # Accept exclude paths (will not diff objects at those locations)
-        if isinstance(exclude_paths, (strings, re._pattern_type)):  # single exclude path w/o container?
-            self.exclude_paths = {exclude_paths}
-        elif isinstance(exclude_paths, (set, list, tuple)):
-            self.exclude_paths = set(exclude_paths)
-        else:
-            self.__initialize_exclude_invalid_value()  # error, RAISE, done here
-
-        # We'll separate exclude_paths into regexp- and non-regexp ones as comparing regular strings
-        # by hash is much cheaper. No need to even fire up the regexp engine if the feature is not used.
-        # We'll also normalize non-regexp exclude paths and enforce those to be some kind of string.
-        self.exclude_regex_paths = set()
-        normalize_me = set()
-        for exclude_path in self.exclude_paths:
-            if isinstance(exclude_path, re._pattern_type):    # move over to regexp
-                self.exclude_regex_paths.add(exclude_path)
-            elif not isinstance(exclude_path, strings):
-                self.__initialize_exclude_invalid_value()  # error, RAISE, done here
-            else:
-                if '"' in exclude_path:  # we use single quotes to indicate string indices
-                    normalize_me.add(exclude_path)
-        self.exclude_paths = self.exclude_paths - self.exclude_regex_paths
-
-        for todo in normalize_me:
-            self.exclude_paths.remove(todo)
-            normalized = todo.replace('"', "'")           # we use single quotes to indicate string indices
-            self.exclude_paths.add(normalized)
-
-    def __initialize_exclude_invalid_value(self):
-        raise ValueError(
-            'You provided an invalid value for exclude_paths. Please provide a set of items,\n' +
-            'each of which must either be a valid path string or a precompiled regular expression.\n' +
-            'Examples:\n' +
-            '- "root[\'remove\']"\n' +
-            '- re.compile(".*remove.*")'
-        )
 
     # TODO: adding adding functionality
     # def __add__(self, other):
@@ -728,7 +691,7 @@ class DeepDiff(ResultDict):
 
         :rtype: None
         """
-        if not self.__skip_this(level):
+        if not self._skip_this(level):
             level.report_type = report_type
             self.tree[report_type].add(level)
 
@@ -778,25 +741,6 @@ class DeepDiff(ResultDict):
             override=True,
             override_t1=t1,
             override_t2=t2)
-
-    def __skip_this(self, level):
-        """
-        Check whether this comparison should be skipped because one of the objects to compare meets exclusion criteria.
-        :rtype: bool
-        """
-        skip = False
-        mypath = level.path()
-        if self.exclude_paths and mypath in self.exclude_paths:
-            skip = True
-        elif self.exclude_regex_paths and any(
-                [exclude_regex_path.match(mypath) for exclude_regex_path in self.exclude_regex_paths]):
-            skip = True
-        else:
-            if isinstance(level.t1, self.exclude_types) or isinstance(
-                    level.t2, self.exclude_types):
-                skip = True
-
-        return skip
 
     def __diff_dict(self,
                     level,
@@ -1103,7 +1047,7 @@ class DeepDiff(ResultDict):
         if level.t1 is level.t2:
             return
 
-        if self.__skip_this(level):
+        if self._skip_this(level):
             return
 
         if type(level.t1) != type(level.t2):
