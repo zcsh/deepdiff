@@ -1363,11 +1363,17 @@ class DeepDiffTextTestCase(unittest.TestCase):
         result = {'iterable_item_added': {"root['add'][3]": 'tempeh'}}
         self.assertEqual(ddiff, result)
 
+    def test_skip_path_result_empty_ignore_order(self):
+        t1 = [{'a': 1, 'b': 2}, {'c': 4, 'b': 5}]
+        t2 = [{'a': 1, 'b': 3}, {'c': 4, 'b': 5}]
+        ddiff = DeepDiff(t1, t2, ignore_order=True, exclude_paths="root[0]['b']")
+        result = {}
+        self.assertEqual(ddiff, result)
+
     def test_skip_regex_result_empty_ignore_order(self):
         t1 = [{'a': 1, 'b': 2}, {'c': 4, 'b': 5}]
         t2 = [{'a': 1, 'b': 3}, {'c': 4, 'b': 5}]
         ddiff = DeepDiff(t1, t2, ignore_order=True, exclude_paths=[re.compile("root\[\d+\]\['b'\]")])
-        print(ddiff)
         result = {}
         self.assertEqual(ddiff, result)
 
