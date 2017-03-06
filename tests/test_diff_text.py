@@ -1363,6 +1363,35 @@ class DeepDiffTextTestCase(unittest.TestCase):
         result = {'iterable_item_added': {"root['add'][3]": 'tempeh'}}
         self.assertEqual(ddiff, result)
 
+    def test_skip_regex_result_empty_ignore_order(self):
+        t1 = [{'a': 1, 'b': 2}, {'c': 4, 'b': 5}]
+        t2 = [{'a': 1, 'b': 3}, {'c': 4, 'b': 5}]
+        ddiff = DeepDiff(t1, t2, ignore_order=True, exclude_paths=[re.compile("root\[\d+\]\['b'\]")])
+        print(ddiff)
+        result = {}
+        self.assertEqual(ddiff, result)
+
+    def test_skip_regex_result_not_empty_ignore_order(self):
+        t1 = [{'a': 1, 'b': 2}, {'c': 4, 'b': 5}]
+        t2 = [{'a': 1, 'b': 3}, {'c': 5, 'b': 5}]
+        ddiff = DeepDiff(t1, t2, ignore_order=True, exclude_paths=[re.compile("root\[\d+\]\['b'\]")])
+        result = {'values_changed': {"root[1]['c']": {'new_value': 5, 'old_value': 4}}}
+        self.assertEqual(ddiff, result)
+
+    def test_skip_regex_no_list_ignore_order(self):
+        t1 = [{'a': 1, 'b': 2}, {'c': 4, 'b': 5}]
+        t2 = [{'a': 1, 'b': 3}, {'c': 5, 'b': 5}]
+        ddiff = DeepDiff(t1, t2, ignore_order=True, exclude_paths=re.compile("root\[\d+\]\['b'\]"))
+        result = {'values_changed': {"root[1]['c']": {'new_value': 5, 'old_value': 4}}}
+        self.assertEqual(ddiff, result)
+
+    def test_skip_regex_mixed_ignore_order(self):
+        t1 = [{'a': 1, 'b': 2}, {'c': 4, 'b': 5}]
+        t2 = [{'a': 1, 'b': 3}, {'c': 5, 'b': 5}]
+        ddiff = DeepDiff(t1, t2, ignore_order=True, exclude_paths=["root[1]['c']", re.compile("root\[\d+\]\['b'\]")])
+        result = {}
+        self.assertEqual(ddiff, result)
+
     def test_unknown_parameters(self):
         with self.assertRaises(ValueError):
             DeepDiff(1, 1, wrong_param=2)
