@@ -1239,13 +1239,25 @@ class DeepDiffTextTestCase(unittest.TestCase):
         ddiff = DeepDiff(t1, t2, exclude_paths={"root['ingredients']"})
         self.assertEqual(ddiff, {})
 
+    def test_skip_path1_reverse_quotes(self):
+        t1 = {
+            "for life": "vegan",
+            "ingredients": ["no meat", "no eggs", "no dairy"]
+        }
+        t2 = {
+            "for life": "vegan",
+            "ingredients": ["veggies", "tofu", "soy sauce"]
+        }
+        ddiff = DeepDiff(t1, t2, exclude_paths={'root["ingredients"]'})
+        self.assertEqual(ddiff, {})
+
     def test_skip_path2(self):
         t1 = {
             "for life": "vegan",
             "ingredients": ["no meat", "no eggs", "no dairy"]
         }
         t2 = {"for life": "vegan"}
-        ddiff = DeepDiff(t1, t2, exclude_paths="root['ingredients']")
+        ddiff = DeepDiff(t1, t2, exclude_paths={"root['ingredients']"})
         self.assertEqual(ddiff, {})
 
     def test_skip_path2_reverse(self):
@@ -1257,6 +1269,15 @@ class DeepDiffTextTestCase(unittest.TestCase):
         ddiff = DeepDiff(t2, t1, exclude_paths={"root['ingredients']"})
         self.assertEqual(ddiff, {})
 
+    def test_skip_path2_param_no_list(self):
+        t1 = {
+            "for life": "vegan",
+            "ingredients": ["no meat", "no eggs", "no dairy"]
+        }
+        t2 = {"for life": "vegan"}
+        ddiff = DeepDiff(t2, t1, exclude_paths="root['ingredients']")
+        self.assertEqual(ddiff, {})
+
     def test_skip_path4(self):
         t1 = {
             "for life": "vegan",
@@ -1266,6 +1287,41 @@ class DeepDiffTextTestCase(unittest.TestCase):
         ddiff = DeepDiff(t1, t2, exclude_paths={"root['ingredients']"})
         self.assertTrue('dictionary_item_added' in ddiff, {})
         self.assertTrue('dictionary_item_removed' not in ddiff, {})
+
+    def test_skip_path_multiple(self):
+        t1 = {
+            "become": "vegan",
+            "remove": ["meat", "eggs", "dairy"],
+            "add": ["veggies", "tofu", "soy sauce"]
+        }
+        t2 = {
+            "become": "vegan",
+            "remove": ["dairy", "meat", "eggs", "fish"],
+            "add": ["veggies", "soy sauce", "tofu", "tempeh"]
+        }
+        ddiff = DeepDiff(t1, t2, exclude_paths={"root['remove']", "root['add']"})
+        result = {}
+        self.assertEqual(ddiff, result)
+
+    def test_skip_path_multiple_param_as_tuple(self):
+        t1 = {
+            "become": "vegan",
+            "remove": ["meat", "eggs", "dairy"],
+            "add": ["veggies", "tofu", "soy sauce"]
+        }
+        t2 = {
+            "become": "vegan",
+            "remove": ["dairy", "meat", "eggs", "fish"],
+            "add": ["veggies", "soy sauce", "tofu", "tempeh"]
+        }
+        ddiff = DeepDiff(t1, t2, exclude_paths=("root['remove']", "root['add']"))
+        result = {}
+        self.assertEqual(ddiff, result)
+
+    def test_skip_path_invalid_argument(self):
+        t1 = t2 = dict()
+        with self.assertRaises(ValueError):
+            DeepDiff(t1, t2, exclude_paths=42)
 
     def test_skip_custom_object_path(self):
         t1 = CustomClass(1)

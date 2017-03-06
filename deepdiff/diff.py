@@ -630,25 +630,7 @@ class DeepDiff(ResultDict):
 
         self.ignore_order = ignore_order
         self.report_repetition = report_repetition
-
-        # Accept exclude paths (will not diff objects at those locations)
-        if isinstance(exclude_paths, (strings, re._pattern_type)):  # single exclude path w/o container?
-            self.exclude_paths = {exclude_paths}
-        else:
-            self.exclude_paths = set(exclude_paths)
-
-        # We'll separate exclude_paths into regexp- and non-regexp ones as comparing regular strings
-        # by hash is much cheaper. No need to even fire up the regexp engine if the feature is not used.
-        self.exclude_regex_paths = set()
-        for exclude_path in self.exclude_paths:
-            if isinstance(exclude_path, re._pattern_type):    # move over to regexp
-                self.exclude_regex_paths.add(exclude_path)
-        self.exclude_paths = self.exclude_paths - self.exclude_regex_paths
-
-
-        # Accept exclude types (will not diff objects of those types)
-        self.exclude_types = tuple(exclude_types)
-
+        self.__initialize_exclude(exclude_paths, exclude_types)
         self.hashes = {}
 
         if significant_digits is not None and significant_digits < 0:
@@ -674,6 +656,46 @@ class DeepDiff(ResultDict):
             self.update(
                 result_text
             )  # be compatible to DeepDiff 2.x if user didn't specify otherwise
+
+    def __initialize_exclude(self, exclude_paths, exclude_types):
+        self.exclude_types = tuple(exclude_types)
+
+        # Accept exclude paths (will not diff objects at those locations)
+        if isinstance(exclude_paths, (strings, re._pattern_type)):  # single exclude path w/o container?
+            self.exclude_paths = {exclude_paths}
+        elif isinstance(exclude_paths, (set, list, tuple)):
+            self.exclude_paths = set(exclude_paths)
+        else:
+            self.__initialize_exclude_invalid_value()  # error, RAISE, done here
+
+        # We'll separate exclude_paths into regexp- and non-regexp ones as comparing regular strings
+        # by hash is much cheaper. No need to even fire up the regexp engine if the feature is not used.
+        # We'll also normalize non-regexp exclude paths and enforce those to be some kind of string.
+        self.exclude_regex_paths = set()
+        normalize_me = set()
+        for exclude_path in self.exclude_paths:
+            if isinstance(exclude_path, re._pattern_type):    # move over to regexp
+                self.exclude_regex_paths.add(exclude_path)
+            elif not isinstance(exclude_path, strings):
+                self.__initialize_exclude_invalid_value()  # error, RAISE, done here
+            else:
+                if '"' in exclude_path:  # we use single quotes to indicate string indices
+                    normalize_me.add(exclude_path)
+        self.exclude_paths = self.exclude_paths - self.exclude_regex_paths
+
+        for todo in normalize_me:
+            self.exclude_paths.remove(todo)
+            normalized = todo.replace('"', "'")           # we use single quotes to indicate string indices
+            self.exclude_paths.add(normalized)
+
+    def __initialize_exclude_invalid_value(self):
+        raise ValueError(
+            'You provided an invalid value for exclude_paths. Please provide a set of items,\n' +
+            'each of which must either be a valid path string or a precompiled regular expression.\n' +
+            'Examples:\n' +
+            '- "root[\'remove\']"\n' +
+            '- re.compile(".*remove.*")'
+        )
 
     # TODO: adding adding functionality
     # def __add__(self, other):
