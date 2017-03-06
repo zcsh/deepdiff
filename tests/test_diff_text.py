@@ -1404,6 +1404,23 @@ class DeepDiffTextTestCase(unittest.TestCase):
         result = {'iterable_item_added': {"root['add'][3]": 'tempeh'}}
         self.assertEqual(ddiff, result)
 
+    def test_skip_path_dict_ignore_order_report_repetition(self):
+        t1 = {
+            "become": "vegan",
+            "remove": ["meat", "eggs", "dairy"],
+            "add": ["veggies", "tofu", "soy sauce"]
+        }
+        t2 = {
+            "become": "vegan",
+            "remove": ["dairy", "meat", "eggs", "fish"],
+            "add": ["veggies", "soy sauce", "tofu", "tofu"]
+        }
+        ddiff = DeepDiff(t1, t2, exclude_paths={"root['remove']"}, ignore_order=True, report_repetition=True)
+        result = {'repetition_change': {"root['add'][1]":
+                                            {'old_indexes': [1], 'value': 'tofu', 'old_repeat': 1,
+                                             'new_indexes': [2, 3], 'new_repeat': 2}}}
+        self.assertEqual(ddiff, result)
+
     def test_skip_regex_dict_ignore_order(self):
         t1 = {
             "become": "vegan",
@@ -1433,11 +1450,28 @@ class DeepDiffTextTestCase(unittest.TestCase):
         result = {}
         self.assertEqual(ddiff, result)
 
+    def test_skip_regex_result_empty_ignore_order_spurious_report_repetition(self):
+        t1 = [{'a': 1, 'b': 2}, {'c': 4, 'b': 5}]
+        t2 = [{'a': 1, 'b': 3}, {'c': 4, 'b': 5}]
+        ddiff = DeepDiff(t1, t2, ignore_order=True,
+                         exclude_paths=[re.compile("root\[\d+\]\['b'\]")], report_repetition=True)
+        result = {}
+        self.assertEqual(ddiff, result)
+
     def test_skip_regex_result_not_empty_ignore_order(self):
         t1 = [{'a': 1, 'b': 2}, {'c': 4, 'b': 5}]
         t2 = [{'a': 1, 'b': 3}, {'c': 5, 'b': 5}]
         ddiff = DeepDiff(t1, t2, ignore_order=True, exclude_paths=[re.compile("root\[\d+\]\['b'\]")])
         result = {'values_changed': {"root[1]['c']": {'new_value': 5, 'old_value': 4}}}
+        self.assertEqual(ddiff, result)
+
+    def test_skip_regex_result_not_empty_ignore_order_report_repetition(self):
+        t1 = [{'a': 1, 'b': 2}, {'c': 4, 'b': 4}]
+        t2 = [{'a': 1, 'b': 2}, {'c': 4, 'b': 5}, {'a': 1, 'b': 2}]
+        ddiff = DeepDiff(t1, t2, ignore_order=True, exclude_paths=[re.compile("root\[\d+\]\['b'\]")], report_repetition=True)
+        result = {'repetition_change': {'root[0]':
+                                            {'new_indexes': [0, 2], 'old_repeat': 1, 'old_indexes': [0],
+                                             'new_repeat': 2, 'value': {'a': 1, 'b': 2}}}}
         self.assertEqual(ddiff, result)
 
     def test_skip_regex_no_list_ignore_order(self):
