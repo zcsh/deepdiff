@@ -208,6 +208,30 @@ class BaseLevel(object):
         """
         raise NotImplementedError
 
+    @property
+    def all_up(self):
+        """
+        Get the root object of this comparison.
+        (This is a convenient wrapper for following the up attribute as often as you can.)
+        :rtype: BaseLevel
+        """
+        level = self
+        while level.up:
+            level = level.up
+        return level
+
+    @property
+    def all_down(self):
+        """
+        Get the leaf object of this comparison.
+        (This is a convenient wrapper for following the down attribute as often as you can.)
+        :rtype: BaseLevel
+        """
+        level = self
+        while level.down:
+            level = level.down
+        return level
+
     def auto_generate_child_rel(self, klass, param):
         """
         Auto-populates the child_rel attribute of all my LevelContent attributes.
@@ -430,34 +454,9 @@ class DiffLevel(BaseLevel):
         """Mimicks old behavior before we introduced ContentLevels"""
         return self.right.child_rel
 
-
     @property
     def repetition(self):
         return self.additional['repetition']
-
-    @property
-    def all_up(self):
-        """
-        Get the root object of this comparison.
-        (This is a convenient wrapper for following the up attribute as often as you can.)
-        :rtype: DiffLevel
-        """
-        level = self
-        while level.up:
-            level = level.up
-        return level
-
-    @property
-    def all_down(self):
-        """
-        Get the leaf object of this comparison.
-        (This is a convenient wrapper for following the down attribute as often as you can.)
-        :rtype: DiffLevel
-        """
-        level = self
-        while level.down:
-            level = level.down
-        return level
 
     def path(self, root="root", force=None):
         """
@@ -481,6 +480,7 @@ class DiffLevel(BaseLevel):
                         This will pretend all iterables are subscriptable, for example.
         """
         # TODO: We could optimize this by building on top of self.up's path if it is cached there
+        # TODO: move to base class
         if force in self._path:
             result = self._path[force]
             return None if result is None else "{}{}".format(root, result)
@@ -524,6 +524,7 @@ class DiffLevel(BaseLevel):
         :rtype: DiffLevel
         :return: New level
         """
+        # TODO: move to base class
         level = self.all_down
         result = DiffLevel(
             new_t1, new_t2, down=None, up=level, report_type=report_type)
@@ -544,6 +545,7 @@ class DiffLevel(BaseLevel):
         :rtype: DiffLevel
         :return: New level in new comparison line
         """
+        # TODO: move to base class
         branch = self.copy()
         return branch.create_deeper(new_t1, new_t2, child_relationship_class,
                                     child_relationship_param, report_type)
@@ -553,6 +555,7 @@ class DiffLevel(BaseLevel):
         Get a deep copy of this comparision line.
         :return: The leaf ("downmost") object of the copy.
         """
+        # TODO: move to base class
         orig = self.all_up
         result = copy(orig)  # copy top level
 
