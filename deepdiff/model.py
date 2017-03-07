@@ -183,7 +183,8 @@ class BaseLevel(object):
     """
     def __init__(self,
                  down = None,
-                 up = None):
+                 up = None,
+                 additional = None):
         self.down = down
         """
         Another BaseLevel object describing this change one level deeper down the object tree
@@ -199,6 +200,20 @@ class BaseLevel(object):
         Will cache result of .path() per 'force' as key for performance
         """
 
+        # Note: don't use {} as additional's default value - this would turn out to be always the same dict object
+        self.additional = {} if additional is None else additional
+        """
+        Allow some additional information to be attached to this tree level.
+        DeepDiff's DiffLevels use these for some types of changes:
+        Currently, this is used for:
+        - values_changed: In case the changes data is a multi-line string,
+                          we include a textual diff as additional['diff'].
+        - repetition_change: additional['repetition']:
+                             e.g. {'old_repeat': 2, 'new_repeat': 1, 'old_indexes': [0, 2], 'new_indexes': [2]}
+        the user supplied ChildRelationship objects for t1 and t2
+        """
+
+
     def __setattr__(self, key, value):
         # Setting up or down, will set the opposite link in this linked list.
         if key in UP_DOWN and value is not None:
@@ -213,6 +228,16 @@ class BaseLevel(object):
         Yield a list of object tree levels used here.
         This will yield two objects for DeepDiff (i.e. DiffLevel objects)
         but just one for e.g. DeepSearch.
+        :return: E.g. [left, right] for DiffLevel
+        :rtype Generator
+        """
+        raise NotImplementedError
+
+    def level_content_keys(self):
+        """
+        Same as above, but return the __dict__ keys for the LevelContents
+        instead of the LevelContents itself.
+        This is useful if you need to replace those.
         :return: E.g. [left, right] for DiffLevel
         :rtype Generator
         """
@@ -299,6 +324,30 @@ class BaseLevel(object):
 
         self._path[force] = result
         result = None if result is None else "{}{}".format(root, result)
+        return result
+
+    def copy(self):
+        """
+        Get a deep copy of this comparision line.
+        :return: The leaf ("downmost") object of the copy.
+        """
+        # TODO: move to base class
+        orig = self.all_up
+        result = copy(orig)  # copy top level
+
+        while orig is not None:
+            for key in orig.level_content_keys():
+                result.__dict__[key] = orig.__dict__[key].copy()
+                result.additional = copy(orig.additional)
+
+            if orig.down is not None:  # copy and create references to the following level
+                # copy following level
+                result.down = copy(orig.down)
+
+            # descend to next level
+            orig = orig.down
+            if result.down is not None:
+                result = result.down
         return result
 
     def auto_generate_child_rel(self, klass, param):
@@ -441,6 +490,10 @@ class DiffLevel(BaseLevel):
         """Implements abstract method from BaseLevel"""
         return self.left, self.right
 
+    def level_content_keys(self) :
+        """Implements abstract method from BaseLevel"""
+        return 'left', 'right'
+
     def __init__(self,
                  t1,
                  t2,
@@ -462,30 +515,22 @@ class DiffLevel(BaseLevel):
                             - The param argument for a ChildRelationship class we shall create.
                            Alternatives for child_rel1 and child_rel2 must be used consistently.
         """
-        super(DiffLevel, self).__init__(down = down, up = up)
+        super(DiffLevel, self).__init__(down = down, up = up, additional=additional)
 
-        # The current-level object in the left hand tree
         self.left = LevelContent(t1, child_rel1)
+        """
+        The current-level object in the left hand tree
+        """
 
-        # The current-level object in the right hand tree
         self.right = LevelContent(t2, child_rel2)
+        """
+        The current-level object in the right hand tree
+        """
 
         self.report_type = report_type
-
-        # If this object is this change's deepest level, this contains a string describing the type of change.
-        # Examples: "set_item_added", "values_changed"
-
-        # Note: don't use {} as additional's default value - this would turn out to be always the same dict object
-        self.additional = {} if additional is None else additional
         """
-        For some types of changes we store some additional information.
-        This is a dict containing this information.
-        Currently, this is used for:
-        - values_changed: In case the changes data is a multi-line string,
-                          we include a textual diff as additional['diff'].
-        - repetition_change: additional['repetition']:
-                             e.g. {'old_repeat': 2, 'new_repeat': 1, 'old_indexes': [0, 2], 'new_indexes': [2]}
-        the user supplied ChildRelationship objects for t1 and t2
+        If this object is this change's deepest level, this contains a string describing the type of change.
+        Examples: "set_item_added", "values_changed"
         """
 
     def __repr__(self):
@@ -561,32 +606,6 @@ class DiffLevel(BaseLevel):
         branch = self.copy()
         return branch.create_deeper(new_t1, new_t2, child_relationship_class,
                                     child_relationship_param, report_type)
-
-    def copy(self):
-        """
-        Get a deep copy of this comparision line.
-        :return: The leaf ("downmost") object of the copy.
-        """
-        # TODO: move to base class
-        orig = self.all_up
-        result = copy(orig)  # copy top level
-
-        while orig is not None:
-            result.left = orig.left.copy()
-            result.right = orig.right.copy()
-            result.additional = copy(orig.additional)
-
-            if orig.down is not None:  # copy and create references to the following level
-                # copy following level
-                result.down = copy(orig.down)
-                result.down.left = orig.down.left.copy()
-                result.down.right = orig.down.right.copy()
-
-            # descend to next level
-            orig = orig.down
-            if result.down is not None:
-                result = result.down
-        return result
 
 
 class ChildRelationship(object):
