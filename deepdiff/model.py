@@ -172,7 +172,51 @@ class TextResult(ResultDict):
                 self['repetition_change'][path]['value'] = change.t1
 
 
-class DiffLevel(object):
+class BaseLevel(object):
+    """
+    Common base class for DiffLevel, ... (more to come ;) )
+    """
+    pass  # TODO
+
+
+class LevelContent(object):
+    """
+    Represents an original object tree's content at this level.
+    DiffLevels have two of those because they contain two object trees
+    (one for the left side or "t1" and one for the right side or "t2")
+    while SearchLevels and HashLevels only contain one.
+    """
+    def __init__(self, obj, child_rel):
+        self.obj = obj
+        """
+        The original object which is this tree's node at this level
+        """
+
+        self.child_rel = child_rel
+        """
+        A ChildRelationship object describing the relationship between t1 and it's child object,
+        where t1's child object equals down.t1.
+        If this relationship is representable as a string, str(self.t1_child_rel) returns a formatted param parsable python string,
+        e.g. "[2]", ".my_attribute"
+        """
+
+    def copy(self):
+        orig = self
+        result = copy(self)  # start with a shallow copy
+
+        # it currently looks like we actually don't need a *copy* of child_rel
+        # child_rel should be considered immutable anyway
+        #if orig.child_rel is not None:
+        #    result.child_rel = ChildRelationship.create(
+        #        klass=orig.child_rel.__class__,
+        #        parent=orig.child_rel.parent,
+        #        child=orig.child_rel.child,
+        #        param=orig.child_rel.param)
+
+        return result
+
+
+class DiffLevel(BaseLevel):
     """
     An object of this class represents a single object-tree-level in a reported change.
     A double-linked list of these object describes a single change on all of its levels.
@@ -275,10 +319,10 @@ class DiffLevel(object):
         """
 
         # The current-level object in the left hand tree
-        self.t1 = t1
+        self.left = LevelContent(t1, child_rel1)
 
         # The current-level object in the right hand tree
-        self.t2 = t2
+        self.right = LevelContent(t2, child_rel2)
 
         # Another DiffLevel object describing this change one level deeper down the object tree
         self.down = down
@@ -302,15 +346,6 @@ class DiffLevel(object):
         # - repetition_change: additional['repetition']:
         #                      e.g. {'old_repeat': 2, 'new_repeat': 1, 'old_indexes': [0, 2], 'new_indexes': [2]}
         # the user supplied ChildRelationship objects for t1 and t2
-
-        # A ChildRelationship object describing the relationship between t1 and it's child object,
-        # where t1's child object equals down.t1.
-        # If this relationship is representable as a string, str(self.t1_child_rel) returns a formatted param parsable python string,
-        # e.g. "[2]", ".my_attribute"
-        self.t1_child_rel = child_rel1
-
-        # Another ChildRelationship object describing the relationship between t2 and it's child object.
-        self.t2_child_rel = child_rel2
 
         # Will cache result of .path() per 'force' as key for performance
         self._path = {}
@@ -338,6 +373,27 @@ class DiffLevel(object):
             self.__dict__[key] = value
 
     @property
+    def t1(self):
+        """Mimicks old behavior before we introduced ContentLevels"""
+        return self.left.obj
+
+    @property
+    def t2(self):
+        """Mimicks old behavior before we introduced ContentLevels"""
+        return self.right.obj
+
+    @property
+    def t1_child_rel(self):
+        """Mimicks old behavior before we introduced ContentLevels"""
+        return self.left.child_rel
+
+    @property
+    def t2_child_rel(self):
+        """Mimicks old behavior before we introduced ContentLevels"""
+        return self.right.child_rel
+
+
+    @property
     def repetition(self):
         return self.additional['repetition']
 
@@ -350,11 +406,12 @@ class DiffLevel(object):
         :param param: A ChildRelationship subclass-dependent parameter describing how to get from parent to child,
                       e.g. the key in a dict
         """
+        # TODO: move to base class or somewhere?!
         if self.down.t1 is not NotPresentHere:
-            self.t1_child_rel = ChildRelationship.create(
+            self.left.child_rel = ChildRelationship.create(
                 klass=klass, parent=self.t1, child=self.down.t1, param=param)
         if self.down.t2 is not NotPresentHere:
-            self.t2_child_rel = ChildRelationship.create(
+            self.right.child_rel = ChildRelationship.create(
                 klass=klass, parent=self.t2, child=self.down.t2, param=param)
 
     @property
@@ -479,24 +536,15 @@ class DiffLevel(object):
         result = copy(orig)  # copy top level
 
         while orig is not None:
+            result.left = orig.left.copy()
+            result.right = orig.right.copy()
             result.additional = copy(orig.additional)
 
             if orig.down is not None:  # copy and create references to the following level
                 # copy following level
                 result.down = copy(orig.down)
-
-                if orig.t1_child_rel is not None:
-                    result.t1_child_rel = ChildRelationship.create(
-                        klass=orig.t1_child_rel.__class__,
-                        parent=result.t1,
-                        child=result.down.t1,
-                        param=orig.t1_child_rel.param)
-                if orig.t2_child_rel is not None:
-                    result.t2_child_rel = ChildRelationship.create(
-                        klass=orig.t2_child_rel.__class__,
-                        parent=result.t2,
-                        child=result.down.t2,
-                        param=orig.t2_child_rel.param)
+                result.down.left = orig.down.left.copy()
+                result.down.right = orig.down.right.copy()
 
             # descend to next level
             orig = orig.down
