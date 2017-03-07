@@ -179,8 +179,25 @@ class TextResult(ResultDict):
 
 class BaseLevel(object):
     """
-    Common base class for DiffLevel, ... (more to come ;) )
+    Common abstract base class for DiffLevel, ... (more to come ;) )
     """
+    def __init__(self,
+                 down = None,
+                 up = None):
+        # Another BaseLevel object describing this change one level deeper down the object tree
+        self.down = down
+
+        # Another BaseLevel object describing this change one level further up the object tree
+        self.up = up
+
+    def __setattr__(self, key, value):
+        # Setting up or down, will set the opposite link in this linked list.
+        if key in UP_DOWN and value is not None:
+            self.__dict__[key] = value
+            opposite_key = UP_DOWN[key]
+            value.__dict__[opposite_key] = self
+        else:
+            self.__dict__[key] = value
 
     def level_contents(self):
         """
@@ -352,18 +369,13 @@ class DiffLevel(BaseLevel):
                             - The param argument for a ChildRelationship class we shall create.
                            Alternatives for child_rel1 and child_rel2 must be used consistently.
         """
+        super(DiffLevel, self).__init__(down = down, up = up)
 
         # The current-level object in the left hand tree
         self.left = LevelContent(t1, child_rel1)
 
         # The current-level object in the right hand tree
         self.right = LevelContent(t2, child_rel2)
-
-        # Another DiffLevel object describing this change one level deeper down the object tree
-        self.down = down
-
-        # Another DiffLevel object describing this change one level further up the object tree
-        self.up = up
 
         self.report_type = report_type
 
@@ -397,15 +409,6 @@ class DiffLevel(BaseLevel):
         else:
             result = "<{}>".format(self.path())
         return result
-
-    def __setattr__(self, key, value):
-        # Setting up or down, will set the opposite link in this linked list.
-        if key in UP_DOWN and value is not None:
-            self.__dict__[key] = value
-            opposite_key = UP_DOWN[key]
-            value.__dict__[opposite_key] = self
-        else:
-            self.__dict__[key] = value
 
     @property
     def t1(self):
