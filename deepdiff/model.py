@@ -1,8 +1,13 @@
 # -*- coding: utf-8 -*-
 
-from deepdiff.helper import items, RemapDict, strings, short_repr, Verbose, NotPresentHere
+from deepdiff.helper import py3, items, RemapDict, strings, short_repr, Verbose, NotPresentHere
 from ast import literal_eval
 from copy import copy
+
+if py3:  # pragma: no cover
+    from itertools import zip_longest
+else:  # pragma: no cover
+    from itertools import izip_longest as zip_longest
 
 FORCE_DEFAULT = 'fake'
 UP_DOWN = {'up': 'down', 'down': 'up'}
@@ -176,7 +181,34 @@ class BaseLevel(object):
     """
     Common base class for DiffLevel, ... (more to come ;) )
     """
-    pass  # TODO
+
+    def level_contents(self):
+        """
+        Get a list of object tree levels used here.
+        This will yield two objects for DeepDiff (i.e. DiffLevel objects)
+        but just one for e.g. DeepSearch.
+        :return: E.g. [left, right] for DiffLevel
+        """
+        raise NotImplementedError
+
+    def auto_generate_child_rel(self, klass, param):
+        """
+        Auto-populates the child_rel attribute of all my LevelContent attributes.
+        If I'm a DiffLevel, this populates the self.child_rel1 and self.child_rel2 aliases.
+        This requires self.down to be another valid BaseLevel object of the same kind.
+        :param klass: A ChildRelationship subclass describing the kind of parent-child relationship,
+                      e.g. DictRelationship.
+        :param param: A ChildRelationship subclass-dependent parameter describing how to get from parent to child,
+                      e.g. the key in a dict
+        """
+        sides = zip_longest(self.level_contents(), self.down.level_contents())
+        for (self_level_content, down_level_content) in sides:
+            if down_level_content.obj is not NotPresentHere:
+                self_level_content.child_rel = ChildRelationship.create(
+                    klass=klass,
+                    parent=self_level_content.obj,
+                    child=down_level_content.obj,
+                    param=param)
 
 
 class LevelContent(object):
@@ -295,6 +327,9 @@ class DiffLevel(BaseLevel):
     <DictRelationship id:4560154384, parent:{2: 'b', 5: 55}, child:55, param:5>
 
     """
+    def level_contents(self):
+        """Implements abstract method from BaseLevel"""
+        return self.left, self.right
 
     def __init__(self,
                  t1,
@@ -396,23 +431,6 @@ class DiffLevel(BaseLevel):
     @property
     def repetition(self):
         return self.additional['repetition']
-
-    def auto_generate_child_rel(self, klass, param):
-        """
-        Auto-populate self.child_rel1 and self.child_rel2.
-        This requires self.down to be another valid DiffLevel object.
-        :param klass: A ChildRelationship subclass describing the kind of parent-child relationship,
-                      e.g. DictRelationship.
-        :param param: A ChildRelationship subclass-dependent parameter describing how to get from parent to child,
-                      e.g. the key in a dict
-        """
-        # TODO: move to base class or somewhere?!
-        if self.down.t1 is not NotPresentHere:
-            self.left.child_rel = ChildRelationship.create(
-                klass=klass, parent=self.t1, child=self.down.t1, param=param)
-        if self.down.t2 is not NotPresentHere:
-            self.right.child_rel = ChildRelationship.create(
-                klass=klass, parent=self.t2, child=self.down.t2, param=param)
 
     @property
     def all_up(self):
