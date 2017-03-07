@@ -184,11 +184,20 @@ class BaseLevel(object):
     def __init__(self,
                  down = None,
                  up = None):
-        # Another BaseLevel object describing this change one level deeper down the object tree
         self.down = down
+        """
+        Another BaseLevel object describing this change one level deeper down the object tree
+        """
 
-        # Another BaseLevel object describing this change one level further up the object tree
         self.up = up
+        """
+        Another BaseLevel object describing this change one level further up the object tree
+        """
+
+        self._path = {}
+        """
+        Will cache result of .path() per 'force' as key for performance
+        """
 
     def __setattr__(self, key, value):
         # Setting up or down, will set the opposite link in this linked list.
@@ -201,10 +210,11 @@ class BaseLevel(object):
 
     def level_contents(self):
         """
-        Get a list of object tree levels used here.
+        Yield a list of object tree levels used here.
         This will yield two objects for DeepDiff (i.e. DiffLevel objects)
         but just one for e.g. DeepSearch.
         :return: E.g. [left, right] for DiffLevel
+        :rtype Generator
         """
         raise NotImplementedError
 
@@ -231,6 +241,65 @@ class BaseLevel(object):
         while level.down:
             level = level.down
         return level
+
+    def path(self, root="root", force=None):
+        """
+        A python syntax string describing how to descend to this level, assuming the top level object is called root.
+        Returns None if the path is not representable as a string.
+        This might be the case for example if there are sets involved (because then there's not path at all) or because
+        custom objects used as dictionary keys (then there is a path but it's not representable).
+        Example: root['ingredients'][0]
+        Note: If there are multiple object trees (which is the case for DeepDiff's DiffLevels for example)
+        we will follow the left side of the comparison branch, i.e. using the t1's to build the path.
+        Using t1 or t2 should make no difference at all, except for the last step of a child-added/removed relationship.
+        If it does in any other case, your comparison path is corrupt.
+        :param root: The result string shall start with this var name
+        :param force: Bends the meaning of "no string representation".
+                      If None:
+                        Will strictly return Python-parsable expressions. The result those yield will compare
+                        equal to the objects in question.
+                      If 'yes':
+                        Will return a path including '(unrepresentable)' in place of non string-representable parts.
+                      If 'fake':
+                        Will try to produce an output optimized for readability.
+                        This will pretend all iterables are subscriptable, for example.
+        """
+        # TODO: We could optimize this by building on top of self.up's path if it is cached there
+        # TODO: move to base class
+        if force in self._path:
+            result = self._path[force]
+            return None if result is None else "{}{}".format(root, result)
+
+        result = ""
+        level = self.all_up  # start at the root
+
+        # traverse all levels of this relationship
+        while level and level is not self:
+            # get this level's relationship object
+            next_rel = None
+            for level_content in level.level_contents():
+                next_rel = level_content.child_rel        # next relationship object to get a formatted param from
+                if next_rel is not None:
+                    break
+
+            if next_rel is None:  # still None - looks like we're at the bottom of this tree
+                break
+
+            # Build path for this level
+            item = next_rel.get_param_repr(force)
+            if item:
+                result += item
+            else:
+                # it seems this path is not representable as a string
+                result = None
+                break
+
+            # Prepare processing next level
+            level = level.down
+
+        self._path[force] = result
+        result = None if result is None else "{}{}".format(root, result)
+        return result
 
     def auto_generate_child_rel(self, klass, param):
         """
@@ -408,18 +477,16 @@ class DiffLevel(BaseLevel):
 
         # Note: don't use {} as additional's default value - this would turn out to be always the same dict object
         self.additional = {} if additional is None else additional
-
-        # For some types of changes we store some additional information.
-        # This is a dict containing this information.
-        # Currently, this is used for:
-        # - values_changed: In case the changes data is a multi-line string,
-        #                   we include a textual diff as additional['diff'].
-        # - repetition_change: additional['repetition']:
-        #                      e.g. {'old_repeat': 2, 'new_repeat': 1, 'old_indexes': [0, 2], 'new_indexes': [2]}
-        # the user supplied ChildRelationship objects for t1 and t2
-
-        # Will cache result of .path() per 'force' as key for performance
-        self._path = {}
+        """
+        For some types of changes we store some additional information.
+        This is a dict containing this information.
+        Currently, this is used for:
+        - values_changed: In case the changes data is a multi-line string,
+                          we include a textual diff as additional['diff'].
+        - repetition_change: additional['repetition']:
+                             e.g. {'old_repeat': 2, 'new_repeat': 1, 'old_indexes': [0, 2], 'new_indexes': [2]}
+        the user supplied ChildRelationship objects for t1 and t2
+        """
 
     def __repr__(self):
         if Verbose.level:
@@ -457,61 +524,6 @@ class DiffLevel(BaseLevel):
     @property
     def repetition(self):
         return self.additional['repetition']
-
-    def path(self, root="root", force=None):
-        """
-        A python syntax string describing how to descend to this level, assuming the top level object is called root.
-        Returns None if the path is not representable as a string.
-        This might be the case for example if there are sets involved (because then there's not path at all) or because
-        custom objects used as dictionary keys (then there is a path but it's not representable).
-        Example: root['ingredients'][0]
-        Note: We will follow the left side of the comparison branch, i.e. using the t1's to build the path.
-        Using t1 or t2 should make no difference at all, except for the last step of a child-added/removed relationship.
-        If it does in any other case, your comparison path is corrupt.
-        :param root: The result string shall start with this var name
-        :param force: Bends the meaning of "no string representation".
-                      If None:
-                        Will strictly return Python-parsable expressions. The result those yield will compare
-                        equal to the objects in question.
-                      If 'yes':
-                        Will return a path including '(unrepresentable)' in place of non string-representable parts.
-                      If 'fake':
-                        Will try to produce an output optimized for readability.
-                        This will pretend all iterables are subscriptable, for example.
-        """
-        # TODO: We could optimize this by building on top of self.up's path if it is cached there
-        # TODO: move to base class
-        if force in self._path:
-            result = self._path[force]
-            return None if result is None else "{}{}".format(root, result)
-
-        result = ""
-        level = self.all_up  # start at the root
-
-        # traverse all levels of this relationship
-        while level and level is not self:
-            # get this level's relationship object
-            next_rel = level.t1_child_rel or level.t2_child_rel  # next relationship object to get a formatted param from
-
-            # t1 and t2 both are empty
-            if next_rel is None:
-                break
-
-            # Build path for this level
-            item = next_rel.get_param_repr(force)
-            if item:
-                result += item
-            else:
-                # it seems this path is not representable as a string
-                result = None
-                break
-
-            # Prepare processing next level
-            level = level.down
-
-        self._path[force] = result
-        result = None if result is None else "{}{}".format(root, result)
-        return result
 
     def create_deeper(self,
                       new_t1,
