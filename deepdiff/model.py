@@ -627,6 +627,14 @@ class DiffLevel(BaseLevel):
         return self.additional['repetition']
 
 
+class HashLevel(BaseLevel):
+    pass  # TODO
+
+
+class SearchLevel(BaseLevel):
+    pass  # TODO
+
+
 class ChildRelationship(object):
     """
     Describes the relationship between a container object (the "parent") and the contained
