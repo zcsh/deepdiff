@@ -76,9 +76,8 @@ class DeepBase(object):
                 [exclude_regex_path.match(mypath) for exclude_regex_path in self.exclude_regex_paths]):
             skip = True
         else:
-            if isinstance(level.t1, self.exclude_types) or isinstance(
-                    level.t2, self.exclude_types):
-                skip = True
-
+            for content in level.level_contents():
+                if isinstance(content.obj, self.exclude_types):
+                    skip = True
         return skip
 
