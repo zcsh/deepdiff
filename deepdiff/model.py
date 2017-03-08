@@ -181,10 +181,43 @@ class BaseLevel(object):
     """
     Common abstract base class for DiffLevel, ... (more to come ;) )
     """
+
     def __init__(self,
-                 down = None,
-                 up = None,
-                 additional = None):
+                 objs=[],
+                 down=None,
+                 up=None,
+                 child_rels=[],
+                 additional=None):
+        """
+        :param list objs: A list of content or "payload" objects corresponding
+                          to the number of object trees handled by the
+                          concrete class.
+                          For DiffLevel, this is 2 while it will be 1 for
+                          most other cases.
+        :param list child_rels: A list of ChildRelationship objects. This should
+                                have the same length as objs as it describes the
+                                "down" relationship for each object tree this
+                                concrete class tracks.
+                                If you don't provide this, we won't set it.
+                                You'll usually want to omit this if there's
+                                either no down or you don't know it yet;
+                                or if you intend to call auto_generate_child_rels()
+                                afterwards.
+        """
+        # First of all, set this level's content by creating the appropriate
+        # amount of LevelContent objects
+        # For example, for DiffLevels this will set .left and .right
+        keys = self.level_content_keys()
+        for (i, key) in enumerate(keys):
+            try:                            # did we get a pre-created ChildRelationship?
+                child_rel = child_rels[i]   # [ ] yup
+            except IndexError:              # [ ] nope
+                child_rel = None
+            self.__dict__[key] = LevelContent(objs[i], child_rel)
+            # If this raises a KeyError, obj does not contain the right amount
+            # of content objects for this kind of level object
+            # (I'm not sure how to express this properly w/o breaking Py2 compatibility)
+
         self.down = down
         """
         Another BaseLevel object describing this change one level deeper down the object tree
@@ -212,7 +245,6 @@ class BaseLevel(object):
                              e.g. {'old_repeat': 2, 'new_repeat': 1, 'old_indexes': [0, 2], 'new_indexes': [2]}
         the user supplied ChildRelationship objects for t1 and t2
         """
-
 
     def __setattr__(self, key, value):
         # Setting up or down, will set the opposite link in this linked list.
@@ -331,7 +363,6 @@ class BaseLevel(object):
         Get a deep copy of this comparision line.
         :return: The leaf ("downmost") object of the copy.
         """
-        # TODO: move to base class
         orig = self.all_up
         result = copy(orig)  # copy top level
 
@@ -486,45 +517,39 @@ class DiffLevel(BaseLevel):
     <DictRelationship id:4560154384, parent:{2: 'b', 5: 55}, child:55, param:5>
 
     """
+
     def level_contents(self):
         """Implements abstract method from BaseLevel"""
         return self.left, self.right
 
-    def level_content_keys(self) :
+    @staticmethod
+    def level_content_keys():
         """Implements abstract method from BaseLevel"""
         return 'left', 'right'
 
     def __init__(self,
-                 t1,
-                 t2,
+                 objs = [],
                  down=None,
                  up=None,
                  report_type=None,
-                 child_rel1=None,
-                 child_rel2=None,
+                 child_rels=[],
                  additional=None,
                  verbose_level=1):
         """
-        :param child_rel1: Either:
-                            - An existing ChildRelationship object describing the "down" relationship for t1; or
-                            - A ChildRelationship subclass. In this case, we will create the ChildRelationship objects
-                              for both t1 and t2.
-                            Alternatives for child_rel1 and child_rel2 must be used consistently.
-        :param child_rel2: Either:
-                            - An existing ChildRelationship object describing the "down" relationship for t2; or
-                            - The param argument for a ChildRelationship class we shall create.
-                           Alternatives for child_rel1 and child_rel2 must be used consistently.
+        See BaseLevel.__init__ for common params.
         """
-        super(DiffLevel, self).__init__(down = down, up = up, additional=additional)
+        super(DiffLevel, self).__init__(objs, down, up, child_rels, additional)
 
-        self.left = LevelContent(t1, child_rel1)
+        self.left   # this gets set by the base class constructor
         """
-        The current-level object in the left hand tree
+        This level's content in the left hand tree.
+        self.left.obj will be the payload object; self.t1 is available as an alias
         """
 
-        self.right = LevelContent(t2, child_rel2)
+        self.right  # this gets set by the base class constructor
         """
-        The current-level object in the right hand tree
+        This level's content in the right hand tree.
+        self.right.obj will be the payload object; self.t2 is available as an alias
         """
 
         self.report_type = report_type
@@ -584,7 +609,7 @@ class DiffLevel(BaseLevel):
         # TODO: move to base class
         level = self.all_down
         result = DiffLevel(
-            new_t1, new_t2, down=None, up=level, report_type=report_type)
+            [new_t1, new_t2], down=None, up=level, report_type=report_type)
         level.down = result
         level.auto_generate_child_rel(
             klass=child_relationship_class, param=child_relationship_param)

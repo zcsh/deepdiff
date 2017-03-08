@@ -126,7 +126,7 @@ class DiffLevelTestCase(TestCase):
 
         # Manually build diff, bottom up
         self.lowest = DiffLevel(
-            self.custom1.a, self.custom2.a, report_type='values_changed')
+            objs=[self.custom1.a, self.custom2.a], report_type='values_changed')
 
         # Test manual child relationship
         rel_int_low_t1 = AttributeRelationship(
@@ -134,11 +134,9 @@ class DiffLevelTestCase(TestCase):
         rel_int_low_t2 = AttributeRelationship(
             parent=self.custom2, child=self.custom2.a, param="a")
         self.intermediate = DiffLevel(
-            self.custom1,
-            self.custom2,
+            objs=[self.custom1, self.custom2],
             down=self.lowest,
-            child_rel1=rel_int_low_t1,
-            child_rel2=rel_int_low_t2)
+            child_rels=[rel_int_low_t1, rel_int_low_t2])
         self.lowest.up = self.intermediate
 
         # Test automatic child relationship
@@ -153,11 +151,9 @@ class DiffLevelTestCase(TestCase):
             child=self.intermediate.t2,
             param=1337)
         self.highest = DiffLevel(
-            self.t1,
-            self.t2,
+            objs=[self.t1, self.t2],
             down=self.intermediate,
-            child_rel1=t1_child_rel,
-            child_rel2=t2_child_rel)
+            child_rels=[t1_child_rel, t2_child_rel])
         self.intermediate.up = self.highest
 
     def test_all_up(self):
@@ -195,8 +191,8 @@ class DiffLevelTestCase(TestCase):
         t2 = {1: 2}
         child_t1 = {}
         child_t2 = {}
-        up = DiffLevel(t1, t2)
-        down = up.down = DiffLevel(child_t1, child_t2)
+        up = DiffLevel([t1, t2])
+        down = up.down = DiffLevel([child_t1, child_t2])
         path = down.path()
         self.assertEqual(path, 'root')
 
@@ -219,7 +215,7 @@ class DiffLevelTestCase(TestCase):
         t1 = [1, 1]
         t2 = [1]
         some_repetition = 'some repetition'
-        node = DiffLevel(t1, t2)
+        node = DiffLevel([t1, t2])
         node.additional['repetition'] = some_repetition
         self.assertEqual(node.repetition, some_repetition)
         self.assertEqual(repr(node), "<root {'repetition': 'some repetition'}>")

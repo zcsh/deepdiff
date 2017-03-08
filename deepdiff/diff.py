@@ -644,7 +644,7 @@ class DeepDiff(DeepBase, ResultDict):
 
         Verbose.level = verbose_level
 
-        root = DiffLevel(t1, t2)
+        root = DiffLevel([t1, t2])
         self.__diff(root, parents_ids=frozenset({id(t1)}))
 
         self.tree.cleanup()
