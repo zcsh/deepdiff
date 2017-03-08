@@ -400,6 +400,37 @@ class BaseLevel(object):
                     child=down_level_content.obj,
                     param=param)
 
+    def create_deeper(self,
+                      new_objs,
+                      child_relationship_class,
+                      child_relationship_param=None):
+        """
+        Start a new level and correctly link it to this one.
+        :param list new_objs: A list referencing all LevelContent.obj's for the next level
+        :rtype: BaseLevel subclass
+        :return: New level
+        """
+        level = self.all_down
+        result = self.__class__(new_objs, down=None, up=level)  # constructor call (just in case anyone was wondering...)
+        level.down = result
+        level.auto_generate_child_rel(
+            klass=child_relationship_class, param=child_relationship_param)
+        return result
+
+    def branch_deeper(self,
+                      new_objs,
+                      child_relationship_class,
+                      child_relationship_param=None):
+        """
+        Fork this tree: Do not touch this comparison/search/hash/whatever line,
+        but create a new one with exactly the same content, just one level deeper.
+        :rtype: DiffLevel
+        :return: New level in new comparison line
+        """
+        branch = self.copy()
+        return branch.create_deeper(new_objs, child_relationship_class,
+                                    child_relationship_param)
+
 
 class LevelContent(object):
     """
@@ -594,43 +625,6 @@ class DiffLevel(BaseLevel):
     @property
     def repetition(self):
         return self.additional['repetition']
-
-    def create_deeper(self,
-                      new_t1,
-                      new_t2,
-                      child_relationship_class,
-                      child_relationship_param=None,
-                      report_type=None):
-        """
-        Start a new comparison level and correctly link it to this one.
-        :rtype: DiffLevel
-        :return: New level
-        """
-        # TODO: move to base class
-        level = self.all_down
-        result = DiffLevel(
-            [new_t1, new_t2], down=None, up=level, report_type=report_type)
-        level.down = result
-        level.auto_generate_child_rel(
-            klass=child_relationship_class, param=child_relationship_param)
-        return result
-
-    def branch_deeper(self,
-                      new_t1,
-                      new_t2,
-                      child_relationship_class,
-                      child_relationship_param=None,
-                      report_type=None):
-        """
-        Branch this comparison: Do not touch this comparison line, but create a new one with exactly the same content,
-        just one level deeper.
-        :rtype: DiffLevel
-        :return: New level in new comparison line
-        """
-        # TODO: move to base class
-        branch = self.copy()
-        return branch.create_deeper(new_t1, new_t2, child_relationship_class,
-                                    child_relationship_param, report_type)
 
 
 class ChildRelationship(object):

@@ -778,16 +778,14 @@ class DeepDiff(DeepBase, ResultDict):
 
         for key in t_keys_added:
             change_level = level.branch_deeper(
-                NotPresentHere,
-                t2[key],
+                [NotPresentHere, t2[key]],
                 child_relationship_class=rel_class,
                 child_relationship_param=key)
             self.__report_result(item_added_key, change_level)
 
         for key in t_keys_removed:
             change_level = level.branch_deeper(
-                t1[key],
-                NotPresentHere,
+                [t1[key], NotPresentHere],
                 child_relationship_class=rel_class,
                 child_relationship_param=key)
             self.__report_result(item_removed_key, change_level)
@@ -800,8 +798,7 @@ class DeepDiff(DeepBase, ResultDict):
 
             # Go one level deeper
             next_level = level.branch_deeper(
-                t1[key],
-                t2[key],
+                [t1[key], t2[key]],
                 child_relationship_class=rel_class,
                 child_relationship_param=key)
             self.__diff(next_level, parents_ids_added)
@@ -822,12 +819,14 @@ class DeepDiff(DeepBase, ResultDict):
 
         for item in items_added:
             change_level = level.branch_deeper(
-                None, item, child_relationship_class=SetRelationship)
+                [None, item],
+                child_relationship_class=SetRelationship)
             self.__report_result('set_item_added', change_level)
 
         for item in items_removed:
             change_level = level.branch_deeper(
-                item, None, child_relationship_class=SetRelationship)
+                [item, None],
+                child_relationship_class=SetRelationship)
             self.__report_result('set_item_removed', change_level)
 
     @staticmethod
@@ -854,16 +853,14 @@ class DeepDiff(DeepBase, ResultDict):
                     level.t1, level.t2, fillvalue=ListItemRemovedOrAdded)):
             if y is ListItemRemovedOrAdded:  # item removed completely
                 change_level = level.branch_deeper(
-                    x,
-                    NotPresentHere,
+                    [x, NotPresentHere],
                     child_relationship_class=child_relationship_class,
                     child_relationship_param=i)
                 self.__report_result('iterable_item_removed', change_level)
 
             elif x is ListItemRemovedOrAdded:  # new item added
                 change_level = level.branch_deeper(
-                    NotPresentHere,
-                    y,
+                    [NotPresentHere, y],
                     child_relationship_class=child_relationship_class,
                     child_relationship_param=i)
                 self.__report_result('iterable_item_added', change_level)
@@ -877,8 +874,7 @@ class DeepDiff(DeepBase, ResultDict):
 
                 # Go one level deeper
                 next_level = level.branch_deeper(
-                    x,
-                    y,
+                    [x, y],
                     child_relationship_class=child_relationship_class,
                     child_relationship_param=i)
                 self.__diff(next_level, parents_ids_added)
@@ -954,8 +950,7 @@ class DeepDiff(DeepBase, ResultDict):
             for hash_value in hashes_added:
                 for i in t2_hashtable[hash_value].indexes:
                     change_level = level.branch_deeper(
-                        NotPresentHere,
-                        t2_hashtable[hash_value].item,
+                        [NotPresentHere, t2_hashtable[hash_value].item],
                         child_relationship_class=SubscriptableIterableRelationship,  # TODO: that might be a lie!
                         child_relationship_param=i
                     )  # TODO: what is this value exactly?
@@ -964,8 +959,7 @@ class DeepDiff(DeepBase, ResultDict):
             for hash_value in hashes_removed:
                 for i in t1_hashtable[hash_value].indexes:
                     change_level = level.branch_deeper(
-                        t1_hashtable[hash_value].item,
-                        NotPresentHere,
+                        [t1_hashtable[hash_value].item, NotPresentHere],
                         child_relationship_class=SubscriptableIterableRelationship,  # TODO: that might be a lie!
                         child_relationship_param=i)
                     self.__report_result('iterable_item_removed', change_level)
@@ -980,9 +974,8 @@ class DeepDiff(DeepBase, ResultDict):
                 if t1_indexes_len != t2_indexes_len:  # this is a repetition change!
                     # create "change" entry, keep current level untouched to handle further changes
                     repetition_change_level = level.branch_deeper(
-                        t1_hashtable[hash_value].item,
-                        t2_hashtable[hash_value].item,  # nb: those are equal!
-                        child_relationship_class=SubscriptableIterableRelationship,  # TODO: that might be a lie!
+                        [t1_hashtable[hash_value].item, t2_hashtable[hash_value].item],  # nb: those are equal!
+                        child_relationship_class=SubscriptableIterableRelationship,      # TODO: that might be a lie!
                         child_relationship_param=t1_hashtable[hash_value]
                         .indexes[0])
                     repetition_change_level.additional['repetition'] = RemapDict(
@@ -996,8 +989,7 @@ class DeepDiff(DeepBase, ResultDict):
         else:
             for hash_value in hashes_added:
                 change_level = level.branch_deeper(
-                    NotPresentHere,
-                    t2_hashtable[hash_value].item,
+                    [NotPresentHere, t2_hashtable[hash_value].item],
                     child_relationship_class=SubscriptableIterableRelationship,  # TODO: that might be a lie!
                     child_relationship_param=t2_hashtable[hash_value].indexes[
                         0])  # TODO: what is this value exactly?
@@ -1005,8 +997,7 @@ class DeepDiff(DeepBase, ResultDict):
 
             for hash_value in hashes_removed:
                 change_level = level.branch_deeper(
-                    t1_hashtable[hash_value].item,
-                    NotPresentHere,
+                    [t1_hashtable[hash_value].item, NotPresentHere],
                     child_relationship_class=SubscriptableIterableRelationship,  # TODO: that might be a lie!
                     child_relationship_param=t1_hashtable[hash_value].indexes[
                         0])
