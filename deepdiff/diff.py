@@ -609,8 +609,8 @@ class DeepDiff(DeepBase, ResultDict):
 
 
     """
-
     show_warning = True
+    default_report_type = 'unknown_change'  # should never be used
 
     def __init__(self,
                  t1,
@@ -640,15 +640,15 @@ class DeepDiff(DeepBase, ResultDict):
                 "significant_digits must be None or a non-negative integer")
         self.significant_digits = significant_digits
 
-        self.tree = DiffTreeResult()
-
         Verbose.level = verbose_level
 
+        self.tree = DiffTreeResult()
         root = DiffLevel([t1, t2])
         self.__diff(root, parents_ids=frozenset({id(t1)}))
 
         self.tree.cleanup()
 
+        # Note: wasting storage here (just in case we ever implement compacting / exporting a storage-friendly diff)
         if view == 'tree':
             self.update(self.tree)
             del self.tree
@@ -678,28 +678,6 @@ class DeepDiff(DeepBase, ResultDict):
     # def _do_iterable_item_added(self, result):
     #     for item in self['iterable_item_added']:
     #         pass
-
-    def __report_result(self, report_type, level):
-        """
-        Add a detected change to the reference-style result dictionary.
-        report_type will be added to level.
-        (We'll create the text-style report from there later.)
-        :param report_type: A well defined string key describing the type of change.
-                            Examples: "set_item_added", "values_changed"
-        :param parent: A DiffLevel object describing the objects in question in their
-                       before-change and after-change object structure.
-
-        :rtype: None
-        """
-        if not self._skip_this(level):
-            level.report_type = report_type
-            self.tree[report_type].add(level)
-
-    @staticmethod
-    def __add_to_frozen_set(parents_ids, item_id):
-        parents_ids = set(parents_ids)
-        parents_ids.add(item_id)
-        return frozenset(parents_ids)
 
     @staticmethod
     def __dict_from_slots(object):
@@ -731,7 +709,7 @@ class DeepDiff(DeepBase, ResultDict):
                 t1 = self.__dict_from_slots(level.t1)
                 t2 = self.__dict_from_slots(level.t2)
             except AttributeError:
-                self.__report_result('unprocessed', level)
+                self._report_result(level, 'unprocessed')
                 return
 
         self.__diff_dict(
@@ -781,20 +759,20 @@ class DeepDiff(DeepBase, ResultDict):
                 [NotPresentHere, t2[key]],
                 child_relationship_class=rel_class,
                 child_relationship_param=key)
-            self.__report_result(item_added_key, change_level)
+            self._report_result(change_level, item_added_key)
 
         for key in t_keys_removed:
             change_level = level.branch_deeper(
                 [t1[key], NotPresentHere],
                 child_relationship_class=rel_class,
                 child_relationship_param=key)
-            self.__report_result(item_removed_key, change_level)
+            self._report_result(change_level, item_removed_key)
 
         for key in t_keys_intersect:  # key present in both dicts - need to compare values
             item_id = id(t1[key])
             if parents_ids and item_id in parents_ids:
                 continue
-            parents_ids_added = self.__add_to_frozen_set(parents_ids, item_id)
+            parents_ids_added = self._add_to_frozen_set(parents_ids, item_id)
 
             # Go one level deeper
             next_level = level.branch_deeper(
@@ -821,13 +799,13 @@ class DeepDiff(DeepBase, ResultDict):
             change_level = level.branch_deeper(
                 [None, item],
                 child_relationship_class=SetRelationship)
-            self.__report_result('set_item_added', change_level)
+            self._report_result(change_level, 'set_item_added')
 
         for item in items_removed:
             change_level = level.branch_deeper(
                 [item, None],
                 child_relationship_class=SetRelationship)
-            self.__report_result('set_item_removed', change_level)
+            self._report_result(change_level, 'set_item_removed')
 
     @staticmethod
     def __iterables_subscriptable(t1, t2):
@@ -856,20 +834,20 @@ class DeepDiff(DeepBase, ResultDict):
                     [x, NotPresentHere],
                     child_relationship_class=child_relationship_class,
                     child_relationship_param=i)
-                self.__report_result('iterable_item_removed', change_level)
+                self._report_result(change_level, 'iterable_item_removed')
 
             elif x is ListItemRemovedOrAdded:  # new item added
                 change_level = level.branch_deeper(
                     [NotPresentHere, y],
                     child_relationship_class=child_relationship_class,
                     child_relationship_param=i)
-                self.__report_result('iterable_item_added', change_level)
+                self._report_result(change_level, 'iterable_item_added')
 
             else:  # check if item value has changed
                 item_id = id(x)
                 if parents_ids and item_id in parents_ids:
                     continue
-                parents_ids_added = self.__add_to_frozen_set(parents_ids,
+                parents_ids_added = self._add_to_frozen_set(parents_ids,
                                                              item_id)
 
                 # Go one level deeper
@@ -892,7 +870,7 @@ class DeepDiff(DeepBase, ResultDict):
             if diff:
                 level.additional['diff'] = '\n'.join(diff)
 
-        self.__report_result('values_changed', level)
+        self._report_result(level, 'values_changed')
 
     def __diff_tuple(self, level, parents_ids):
         # Checking to see if it has _fields. Which probably means it is a named
@@ -954,7 +932,7 @@ class DeepDiff(DeepBase, ResultDict):
                         child_relationship_class=SubscriptableIterableRelationship,  # TODO: that might be a lie!
                         child_relationship_param=i
                     )  # TODO: what is this value exactly?
-                    self.__report_result('iterable_item_added', change_level)
+                    self._report_result(change_level, 'iterable_item_added')
 
             for hash_value in hashes_removed:
                 for i in t1_hashtable[hash_value].indexes:
@@ -962,7 +940,7 @@ class DeepDiff(DeepBase, ResultDict):
                         [t1_hashtable[hash_value].item, NotPresentHere],
                         child_relationship_class=SubscriptableIterableRelationship,  # TODO: that might be a lie!
                         child_relationship_param=i)
-                    self.__report_result('iterable_item_removed', change_level)
+                    self._report_result(change_level, 'iterable_item_removed')
 
             items_intersect = t2_hashes.intersection(t1_hashes)
 
@@ -983,8 +961,8 @@ class DeepDiff(DeepBase, ResultDict):
                         new_repeat=t2_indexes_len,
                         old_indexes=t1_indexes,
                         new_indexes=t2_indexes)
-                    self.__report_result('repetition_change',
-                                         repetition_change_level)
+                    self._report_result(repetition_change_level,
+                                        'repetition_change')
 
         else:
             for hash_value in hashes_added:
@@ -993,7 +971,7 @@ class DeepDiff(DeepBase, ResultDict):
                     child_relationship_class=SubscriptableIterableRelationship,  # TODO: that might be a lie!
                     child_relationship_param=t2_hashtable[hash_value].indexes[
                         0])  # TODO: what is this value exactly?
-                self.__report_result('iterable_item_added', change_level)
+                self._report_result(change_level, 'iterable_item_added')
 
             for hash_value in hashes_removed:
                 change_level = level.branch_deeper(
@@ -1001,7 +979,7 @@ class DeepDiff(DeepBase, ResultDict):
                     child_relationship_class=SubscriptableIterableRelationship,  # TODO: that might be a lie!
                     child_relationship_param=t1_hashtable[hash_value].indexes[
                         0])
-                self.__report_result('iterable_item_removed', change_level)
+                self._report_result(change_level, 'iterable_item_removed')
 
     def __diff_numbers(self, level):
         """Diff Numbers"""
@@ -1023,15 +1001,15 @@ class DeepDiff(DeepBase, ResultDict):
             if set(t1_s) <= set("-0.") and set(t2_s) <= set("-0."):
                 return
             elif t1_s != t2_s:
-                self.__report_result('values_changed', level)
+                self._report_result(level, 'values_changed')
         else:
             if level.t1 != level.t2:
-                self.__report_result('values_changed', level)
+                self._report_result(level, 'values_changed')
 
     def __diff_types(self, level):
         """Diff types"""
         level.report_type = 'type_changes'
-        self.__report_result('type_changes', level)
+        self._report_result(level, 'type_changes')
 
     def __diff(self, level, parents_ids=frozenset({})):
         """The main diff method"""

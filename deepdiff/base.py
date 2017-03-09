@@ -20,6 +20,8 @@ class DeepBase(object):
     Common base class to DeepDiff, DeepSearch and DeepHash
     TODO: Move more functionality here
     """
+    default_report_type = 'unknown'  # concrete classes shall override
+
     def __init__(self, exclude_paths, exclude_types):
         self.__initialize_exclude(exclude_paths, exclude_types)
 
@@ -80,4 +82,29 @@ class DeepBase(object):
                 if isinstance(content.obj, self.exclude_types):
                     skip = True
         return skip
+
+    def _report_result(self, level, report_type=None):
+        """
+        Add a detected change to the reference-style result dictionary.
+        report_type will be added to level.
+        (We'll create the text-style report from there later.)
+        :param report_type: A well defined string key describing the type of change.
+                            Examples: "set_item_added", "values_changed"
+        :param parent: A DiffLevel object describing the objects in question in their
+                       before-change and after-change object structure.
+
+        :rtype: None
+        """
+        if report_type is None:
+            report_type = self.default_report_type
+        if not self._skip_this(level):
+            level.report_type = report_type
+            self.tree[report_type].add(level)
+
+    @staticmethod
+    def _add_to_frozen_set(parents_ids, item_id):
+        parents_ids = set(parents_ids)
+        parents_ids.add(item_id)
+        return frozenset(parents_ids)
+
 
