@@ -177,6 +177,22 @@ class DiffTextResult(ResultDict):
                 self['repetition_change'][path]['value'] = change.t1
 
 
+class HashTreeResult(ResultDict):
+    pass
+
+
+class HashTextResult(ResultDict):
+    pass
+
+
+class SearchTreeResult(ResultDict):
+    pass
+
+
+class SearchTextResult(ResultDict):
+    pass
+
+
 class BaseLevel(object):
     """
     Common abstract base class for DiffLevel, ... (more to come ;) )
