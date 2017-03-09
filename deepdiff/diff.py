@@ -629,18 +629,16 @@ class DeepDiff(DeepBase, ResultDict):
                 "The valid parameters are ignore_order, report_repetition, significant_digits,"
                 "exclude_paths, exclude_types, verbose_level and view.") % ', '.join(kwargs.keys()))
         
-        DeepBase.__init__(self, exclude_paths, exclude_types)
+        DeepBase.__init__(self,
+                          significant_digits=significant_digits,
+                          exclude_paths=exclude_paths,
+                          exclude_types=exclude_types,
+                          verbose_level=verbose_level,
+                          view=view)
         
         self.ignore_order = ignore_order
         self.report_repetition = report_repetition
         self.hashes = {}
-
-        if significant_digits is not None and significant_digits < 0:
-            raise ValueError(
-                "significant_digits must be None or a non-negative integer")
-        self.significant_digits = significant_digits
-
-        Verbose.level = verbose_level
 
         self.tree = DiffTreeResult()
         root = DiffLevel([t1, t2])

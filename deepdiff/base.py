@@ -22,7 +22,19 @@ class DeepBase(object):
     """
     default_report_type = 'unknown'  # concrete classes shall override
 
-    def __init__(self, exclude_paths, exclude_types):
+    def __init__(self,
+                 significant_digits=None,
+                 exclude_paths=set(),
+                 exclude_types=set(),
+                 verbose_level=1,
+                 view='text'):
+        if significant_digits is not None and significant_digits < 0:
+            raise ValueError(
+                "significant_digits must be None or a non-negative integer")
+        self.significant_digits = significant_digits
+
+        Verbose.level = verbose_level
+
         self.__initialize_exclude(exclude_paths, exclude_types)
 
     def __initialize_exclude(self, exclude_paths, exclude_types):
