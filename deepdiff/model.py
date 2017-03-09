@@ -44,13 +44,13 @@ class ResultDict(RemapDict):
             del self[k]
 
 
-class TreeResult(ResultDict):
+class DiffTreeResult(ResultDict):
     def __init__(self):
         for key in REPORT_KEYS:
             self[key] = set()
 
 
-class TextResult(ResultDict):
+class DiffTextResult(ResultDict):
     def __init__(self, tree_results=None):
 
         # TODO: centralize keys

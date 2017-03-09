@@ -22,7 +22,7 @@ from collections import Iterable
 
 from deepdiff.helper import py3, strings, numbers, ListItemRemovedOrAdded, NotPresentHere, IndexedHash, Verbose
 from deepdiff.base import DeepBase
-from deepdiff.model import RemapDict, ResultDict, TextResult, TreeResult, DiffLevel
+from deepdiff.model import RemapDict, ResultDict, DiffTextResult, DiffTreeResult, DiffLevel
 from deepdiff.model import DictRelationship, AttributeRelationship  # , REPORT_KEYS
 from deepdiff.model import SubscriptableIterableRelationship, NonSubscriptableIterableRelationship, SetRelationship
 from deepdiff.contenthash import DeepHash
@@ -640,7 +640,7 @@ class DeepDiff(DeepBase, ResultDict):
                 "significant_digits must be None or a non-negative integer")
         self.significant_digits = significant_digits
 
-        self.tree = TreeResult()
+        self.tree = DiffTreeResult()
 
         Verbose.level = verbose_level
 
@@ -653,7 +653,7 @@ class DeepDiff(DeepBase, ResultDict):
             self.update(self.tree)
             del self.tree
         else:
-            result_text = TextResult(tree_results=self.tree)
+            result_text = DiffTextResult(tree_results=self.tree)
             result_text.cleanup()  # clean up text-style result dictionary
             self.update(
                 result_text
