@@ -28,12 +28,17 @@ class DeepBase(object):
                  exclude_types=set(),
                  verbose_level=1,
                  view='text'):
+        self.view = view
+        """
+        Specifies the default view. Available views are 'text' and 'tree'.
+        """
+
+        Verbose.level = verbose_level
+
         if significant_digits is not None and significant_digits < 0:
             raise ValueError(
                 "significant_digits must be None or a non-negative integer")
         self.significant_digits = significant_digits
-
-        Verbose.level = verbose_level
 
         self.__initialize_exclude(exclude_paths, exclude_types)
 
@@ -95,11 +100,16 @@ class DeepBase(object):
                     skip = True
         return skip
 
+    # TODO: Move report_type back to Diff where it belongs,
+    # throw the copy() out of BaseLevel and generally inherit sensibly
     def _report_result(self, level, report_type=None):
         """
         Add a detected change to the reference-style result dictionary.
         report_type will be added to level.
         (We'll create the text-style report from there later.)
+        Note: For DeepHash this will only be called once.
+              DeepHash produces only one "result" which is a tree by itself
+              (see comments in model.py for details).
         :param report_type: A well defined string key describing the type of change.
                             Examples: "set_item_added", "values_changed"
         :param parent: A DiffLevel object describing the objects in question in their

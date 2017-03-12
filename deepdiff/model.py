@@ -12,7 +12,7 @@ else:  # pragma: no cover
 FORCE_DEFAULT = 'fake'
 UP_DOWN = {'up': 'down', 'down': 'up'}
 
-REPORT_KEYS = {
+DIFF_REPORT_KEYS = {
     "type_changes",
     "dictionary_item_added",
     "dictionary_item_removed",
@@ -25,6 +25,11 @@ REPORT_KEYS = {
     "set_item_removed",
     "set_item_added",
     "repetition_change",
+}
+
+HASH_REPORT_KEYS = {
+    "hash",
+    "unprocessed"
 }
 
 
@@ -46,7 +51,7 @@ class ResultDict(RemapDict):
 
 class DiffTreeResult(ResultDict):
     def __init__(self):
-        for key in REPORT_KEYS:
+        for key in DIFF_REPORT_KEYS:
             self[key] = set()
 
 
@@ -78,7 +83,7 @@ class DiffTextResult(ResultDict):
     def _from_tree_results(self, tree):
         """
         Populate this object by parsing an existing reference-style result dictionary.
-        :param tree: A TreeResult
+        :param DiffTreeResult tree: Source data
         :return:
         """
         self._from_tree_type_changes(tree)
@@ -178,11 +183,28 @@ class DiffTextResult(ResultDict):
 
 
 class HashTreeResult(ResultDict):
-    pass
+    def __init__(self):
+        for key in HASH_REPORT_KEYS:
+            self[key] = set()
 
 
 class HashTextResult(ResultDict):
-    pass
+    def __init__(self, tree_results=None):
+        for key in HASH_REPORT_KEYS:
+            self[key] = set()
+        if tree_results:
+            self._from_tree_results(tree_results)
+
+    def _from_tree_results(self, tree):
+        """
+        Populate this object by parsing an existing reference-style result dictionary.
+        :param DiffTreeResult tree: Source data
+        :return:
+        """
+        (level, ) = tree["hash"]  # only element in set
+        result = ""
+        while True:
+            break
 
 
 class SearchTreeResult(ResultDict):
@@ -223,8 +245,7 @@ class BaseLevel(object):
         # First of all, set this level's content by creating the appropriate
         # amount of LevelContent objects
         # For example, for DiffLevels this will set .left and .right
-        keys = self.level_content_keys()
-        for (i, key) in enumerate(keys):
+        for (i, key) in enumerate(self.level_content_keys()):
             try:                            # did we get a pre-created ChildRelationship?
                 child_rel = child_rels[i]   # [ ] yup
             except IndexError:              # [ ] nope
@@ -374,13 +395,22 @@ class BaseLevel(object):
         result = None if result is None else "{}{}".format(root, result)
         return result
 
-    def copy(self):
+    def copy(self, full_path=True):
         """
         Get a deep copy of this comparision line.
+        Note: This does not copy ChildRelationships as those are considered
+        immutable (--> the relationship between two objects is a fact and not
+        up for discussion). (Auto-)Create a new ChildRelationship object if needed.
+        :param full_path: Include levels above this object.
+                          Always safe to say yes,
+                          but saves performance to skip if you don't need it.
         :return: The leaf ("downmost") object of the copy.
         """
-        orig = self.all_up
+        orig = (self.all_up if full_path else self)
         result = copy(orig)  # copy top level
+
+        if not full_path:     # just copying the bottom of this path,
+            result.up = None  # this means we don't include anything above this point
 
         while orig is not None:
             for key in orig.level_content_keys():
@@ -436,14 +466,18 @@ class BaseLevel(object):
     def branch_deeper(self,
                       new_objs,
                       child_relationship_class,
-                      child_relationship_param=None):
+                      child_relationship_param=None,
+                      full_path=True):
         """
         Fork this tree: Do not touch this comparison/search/hash/whatever line,
         but create a new one with exactly the same content, just one level deeper.
+        :param full_path: Include levels above this object.
+                          Always safe to say yes,
+                          but saves performance to skip if you don't need it.
         :rtype: DiffLevel
         :return: New level in new comparison line
         """
-        branch = self.copy()
+        branch = self.copy(full_path=full_path)
         return branch.create_deeper(new_objs, child_relationship_class,
                                     child_relationship_param)
 
@@ -567,12 +601,14 @@ class DiffLevel(BaseLevel):
 
     def level_contents(self):
         """Implements abstract method from BaseLevel"""
-        return self.left, self.right
+        yield self.left
+        yield self.right
 
     @staticmethod
     def level_content_keys():
         """Implements abstract method from BaseLevel"""
-        return 'left', 'right'
+        yield 'left'
+        yield 'right'
 
     def __init__(self,
                  objs = [],
@@ -587,13 +623,13 @@ class DiffLevel(BaseLevel):
         """
         super(DiffLevel, self).__init__(objs, down, up, child_rels, additional)
 
-        self.left   # this gets set by the base class constructor
+        # self.left   # this gets set by the base class constructor
         """
         This level's content in the left hand tree.
         self.left.obj will be the payload object; self.t1 is available as an alias
         """
 
-        self.right  # this gets set by the base class constructor
+        # self.right  # this gets set by the base class constructor
         """
         This level's content in the right hand tree.
         self.right.obj will be the payload object; self.t2 is available as an alias
@@ -644,7 +680,110 @@ class DiffLevel(BaseLevel):
 
 
 class HashLevel(BaseLevel):
-    pass  # TODO
+    """
+    While the results of searches and diff are individual paths through the object tree
+    (a search result basically gives you directions through the object tree until you arrive
+    at your destination -- the object containing your search value;
+    any single diff result gives you directions through both an left-hand and and right-hand object
+    tree until you arrive at the boint where those two diverge)
+    hashing means traversing the whole tree.
+    This means that a HashLevel always contains one single obj -- the object of the tree
+    we're currently looking at -- but provides any number of child_rels.
+    It also means there is just a single up, but any number of down's.
+    And here's where it start to get ugly so I just mark it with TODO
+    #
+    # - A single chain of *SearchLevel* objects represents a single path through a single object tree,
+    #   leading from to root up to an object matching the search criteria.
+    #   - Therefore, a SearchTreeResult contains all of those paths which lead to matching objects.
+    # - A single chain of *DiffLevel* objects represents a single path through two similar
+    #   object trees, from the root up a point where they diverge.
+    #   - Therefore, a DiffTreeResult contains all of those paths, each ending at a point where the
+    #     payload trees t1 and t2 diverge.
+    # - A chain of *HashLevel* objects denotes just any path through the object tree
+    #   from the root to any leaf.
+    #   At all points where the payload object tree branches this chain references
+    #   (through .additional["branches"]) another chain that represents a path to another
+    #   leaf. This other chain will again reference additional chains whereever this
+    #   subtree branches.
+    #   (To conserve memory, we'll only keep one complete root-to-leaf HashLevel chain
+    #   and the others will just start at their branching point.)
+    #   - Therefore, a HashTreeResult contains just a single HashLevel "chain", which as explained
+    #     is not really a single chain at all but a tree itself.
+    """
+    def __init__(self,
+                 objs = [],
+                 down=None,
+                 up=None,
+                 child_rels=[],
+                 hash = None):
+        """
+        See BaseLevel.__init__ for common params.
+        """
+        super(HashLevel, self).__init__(objs, down, up, child_rels)
+
+        # self.content will be set by base class constructor
+
+        self.hash = hash
+        """
+        TODO
+        """
+
+        self.additional["branches"] = []
+
+    def level_contents(self):
+        yield self.content
+
+    def level_content_keys(self):
+        yield 'content'
+
+    @property
+    def obj(self):
+        return self.content.obj
+
+    @property
+    def child_rel(self):
+        try:
+            return self.content.child_rel
+        except IndexError:
+            return None
+
+    def new_entry(self,
+                  new_obj,
+                  child_relationship_class,
+                  child_relationship_param=None):
+        """
+        Wrapper around BaseLevel.branch_deeper():
+        HashLevels store one subtree in the default .down attribute and the rest as
+        .additional["branches"]. This method decides which one it'll be.
+        :return The parent level object (which may or may not be the
+                object you called this method on
+        """
+        if not self.down:
+            # this is the first branch we learn - just use down
+            # and extend this chain
+            self.create_deeper(new_objs = [new_obj],
+                               child_relationship_class=child_relationship_class,
+                               child_relationship_param=child_relationship_param)
+            return self
+        else:
+            # This is an additional branch.
+            # Create a new chain and store it in .additional["branches"]
+            new_branch = self.copy(full_path=False)
+            self.additional["branches"].append(new_branch)
+            new_branch.create_deeper(
+                new_objs=[new_obj],
+                child_relationship_class=child_relationship_class,
+                child_relationship_param=child_relationship_param)
+            return new_branch
+
+    def all_branches(self):
+        """
+        Generator providing all current branches of this chain.
+        """
+        if self.down:
+            yield self.down
+        if self.additional["branches"]:
+            yield from self.additional["branches"]
 
 
 class SearchLevel(BaseLevel):
@@ -681,6 +820,8 @@ class ChildRelationship(object):
 
         # A subclass-dependent parameter describing how to get from parent to child, e.g. the key in a dict
         self.param = param
+
+        # will add self.param_hash for DeepHash
 
     def __repr__(self):
         name = "<{} parent:{}, child:{}, param:{}>"

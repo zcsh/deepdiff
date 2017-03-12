@@ -640,12 +640,13 @@ class DeepDiff(DeepBase, ResultDict):
         self.report_repetition = report_repetition
         self.hashes = {}
 
+        # Prepare result tree, perform the actual diff and clean up
         self.tree = DiffTreeResult()
         root = DiffLevel([t1, t2])
         self.__diff(root, parents_ids=frozenset({id(t1)}))
-
         self.tree.cleanup()
 
+        # Provide default view
         # Note: wasting storage here (just in case we ever implement compacting / exporting a storage-friendly diff)
         if view == 'tree':
             self.update(self.tree)
@@ -707,8 +708,8 @@ class DeepDiff(DeepBase, ResultDict):
                 t1 = self.__dict_from_slots(level.t1)
                 t2 = self.__dict_from_slots(level.t2)
             except AttributeError:
-                self._report_result(level, 'unprocessed')
-                return
+                # we're out of ideas
+                return self._report_result(level, 'unprocessed')
 
         self.__diff_dict(
             level,
@@ -805,6 +806,7 @@ class DeepDiff(DeepBase, ResultDict):
                 child_relationship_class=SetRelationship)
             self._report_result(change_level, 'set_item_removed')
 
+    # TODO: generalize, move to base
     @staticmethod
     def __iterables_subscriptable(t1, t2):
         try:
