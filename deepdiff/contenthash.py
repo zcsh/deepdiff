@@ -69,7 +69,8 @@ class DeepHash(DeepBase, dict):
         DeepBase.__init__(self,
                           significant_digits=significant_digits,
                           exclude_paths=exclude_paths,
-                          exclude_types=exclude_types)
+                          exclude_types=exclude_types,
+                          view=view)
 
         self.ignore_repetition = ignore_repetition
         self.hasher = hasher
@@ -88,10 +89,11 @@ class DeepHash(DeepBase, dict):
         # Prepare result tree, perform the actual hashing and clean up
         self.tree = HashTreeResult()
         root = HashLevel([obj])
+        root.hash_function = hasher
         self.__hash(root, parents_ids=frozenset({id(obj)}))
 
         # DeepHash produces only a single "result" which is a tree by itself
-        self._report_result(root)
+        self.tree[self.default_report_type] = root
         self.tree.cleanup()
 
         # Provide default view
@@ -144,9 +146,10 @@ class DeepHash(DeepBase, dict):
             item,
             child_relationship_class=rel_class,
             child_relationship_param=rel_param)
-        parent_level.child_rel.param_hash = DeepHash(rel_param)  # TODO do we really want another DeepHash object here?
+        parent_level.child_rel.param_hash = DeepHash(rel_param, view="tree")  # TODO do we really want another DeepHash object here?
 
-        self.__hash(parent_level, parents_ids_added)
+        content_level = parent_level.down
+        self.__hash(content_level, parents_ids_added)
 
     def __hash_obj(self, level, parents_ids=frozenset({}), is_namedtuple=False):
         """
@@ -255,7 +258,7 @@ class DeepHash(DeepBase, dict):
         This is not a container. Thus, this is a leaf of the object tree.
         --> No more branches! Yay!
         """
-        level.hash = self.hasher(level.obj)
+        level.leaf_hash = self.hasher(level.obj)
         #result = "str:{}".format(result)
         #self[obj_id] = result
         #return result
@@ -273,13 +276,13 @@ class DeepHash(DeepBase, dict):
             # Special case for 0: "-0.00" should compare equal to "0.00"
             if set(obj_s) <= set("-0."):
                 obj_s = "0.00"
-            level.hash = obj_s  # TODO do we really want strings as hashes in our model?
+            level.leaf_hash = obj_s
             #result = "number:{}".format(obj_s)
             #obj_id = id(obj)
             #self[obj_id] = result
         else:
             #result = "{}:{}".format(type(obj).__name__, obj)
-            level.hash = level.obj  # TODO and this is NOT a string. Need to find a solution for that.
+            level.leaf_hash = level.obj
 
     def __hash_tuple(self, level, parents_ids):
         """

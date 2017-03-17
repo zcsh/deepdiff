@@ -15,10 +15,10 @@ Or using Nose:
 
 To run a specific test, run this from the root of repo:
     On linux:
-    nosetests ./tests/test_hash.py:DeepHashTestCase.test_bytecode
+    nosetests ./tests/test_hash_text.py:DeepHashTestCase.test_bytecode
 
     On windows:
-    nosetests .\tests\test_hash.py:DeepHashTestCase.test_string_in_root
+    nosetests .\tests\test_hash_text.py:DeepHashTestCase.test_string_in_root
 """
 import unittest
 from deepdiff import DeepHash
@@ -45,7 +45,7 @@ def hash_and_format(obj):
     return "str:{}".format(hash(obj))
 
 
-class DeepHashTestCase(unittest.TestCase):
+class DeepHashTextTestCase(unittest.TestCase):
     """DeepHash Tests."""
 
     def test_hash_str(self):
