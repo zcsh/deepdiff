@@ -72,6 +72,9 @@ class DeepHashTextTestCase(unittest.TestCase):
     def test_list2(self):
         # Why do we sort list objects in text view?
         # Lists are ordered containers. This is basically a collision.
+        # Maybe we should introduce an ignore_order flag, same as we have in
+        # DeepDiff. Maybe we can even unify order/repetition handling and share some code
+        # between DeepDiff, DeepHash and DeepSearch for that.
         string1 = "a"
         obj = [string1, 20, 10]
         expected_result = {
