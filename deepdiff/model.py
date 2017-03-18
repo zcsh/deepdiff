@@ -477,7 +477,7 @@ class BaseLevel(object):
         while orig is not None:
             for key in orig.level_content_keys():
                 result.__dict__[key] = orig.__dict__[key].copy()
-                result.additional = copy(orig.additional)
+            result.additional = copy(orig.additional)
 
             if orig.down is not None:  # copy and create references to the following level
                 # copy following level
@@ -851,6 +851,7 @@ class HashLevel(BaseLevel):
             # Create a new chain and store it in .additional["branches"]
             new_branch = self.copy(full_path=False)
             new_branch.hasher = self.hasher  # TODO move somewhere else
+            new_branch.additional["branches"] = []  # new branch has no additional branches
             self.additional["branches"].append(new_branch)
             new_branch.create_deeper(
                 new_objs=[new_obj],
@@ -885,7 +886,14 @@ class HashLevel(BaseLevel):
         If this is not set, raise an error.
         :rtype: str
         """
+        # TODO possibe collisions? e.g. deep vs broad containers?
+        #      this is probably not a secure hash yet
+
         if self._hash is not None:  # cached?
+            return self._hash
+
+        if self.status is not True:
+            self._hash = ""
             return self._hash
 
         concat = str(self.obj.__class__)
@@ -895,7 +903,8 @@ class HashLevel(BaseLevel):
         else:
             for branch in self.all_branches():
                 param_hash = branch.child_rel.param_hash["hash"].hash()
-                concat += param_hash + branch.down.hash()
+                child_hash = branch.down.hash()
+                concat += param_hash + child_hash
 
         self._hash = str(self.hasher(concat))
         return self._hash

@@ -25,7 +25,7 @@ from deepdiff import DeepHash
 from deepdiff.helper import py3, pypy3
 from deepdiff.model import HashLevel
 from collections import namedtuple
-from tests import CustomClass
+from tests import CustomClass, Bad
 import logging
 
 logging.disable(logging.CRITICAL)
@@ -33,6 +33,11 @@ logging.disable(logging.CRITICAL)
 
 class DeepHashTreeTestCase(unittest.TestCase):
     """DeepHash Tests."""
+
+    def setUp(self):
+        self.string_class = str("a".__class__)
+        tmp = 10
+        self.int_class = str(tmp.__class__)
 
     def test_str(self):
         obj = "a"
@@ -76,27 +81,24 @@ class DeepHashTreeTestCase(unittest.TestCase):
         self.assertEqual(twenty_level.leaf_hash, 20)
 
         # check "deep" hashes of all leaves
-        string_class = str(string1.__class__)
-        tmp = 10
-        int_class = str(tmp.__class__)
 
         string_hash = str(
             hash(
-                string_class + str(hash(string1))
+                self.string_class + str(hash(string1))
             )
         )
         self.assertEqual(string_level.hash(), string_hash)
 
         ten_hash = str(
             hash(
-                int_class + "10"
+                self.int_class + "10"
             )
         )
         self.assertEqual(ten_level.hash(), ten_hash)
 
         twenty_hash = str(
             hash(
-                int_class + "20"
+                self.int_class + "20"
             )
         )
         self.assertEqual(twenty_level.hash(), twenty_hash)
@@ -105,14 +107,92 @@ class DeepHashTreeTestCase(unittest.TestCase):
         deep = str(
             hash(
                 str(obj.__class__) +  # top level object is a dict
-                str(hash(int_class + "0")) +  # param hash (param for first list item is 0)
+                str(hash(self.int_class + "0")) +  # param hash (param for first list item is 0)
                 string_hash +      # hash of first list item
-                str(hash(int_class + "1")) +  # param hash (param for second list item is 1)
+                str(hash(self.int_class + "1")) +  # param hash (param for second list item is 1)
                 ten_hash +         # hash of second list item
-                str(hash(int_class + "2")) +  # param hash (param for third list item is 2)
+                str(hash(self.int_class + "2")) +  # param hash (param for third list item is 2)
                 twenty_hash
             )
         )
         self.assertEqual(result_level.hash(), deep)
+
+    def test_bad_in_list(self):
+        bad = Bad()
+        obj = [42, 1337, 31337, bad]
+
+        result = DeepHash(obj, view='tree')
+        top = result["hash"]
+
+        # check object structure:
+        # get all levels, verify objects in place
+        fourtytwo = top.down
+        self.assertEqual(fourtytwo.obj, 42)
+
+        leet = top.additional["branches"][0].down
+        self.assertEqual(leet.obj, 1337)
+
+        elite = top.additional["branches"][1].down
+        self.assertEqual(elite.obj, 31337)
+
+        badobject = top.additional["branches"][2].down
+        self.assertIs(badobject.obj, bad)
+
+        # depth is 2 --> all children are leaves
+        self.assertIsNone(fourtytwo.down)
+        self.assertIsNone(leet.down)
+        self.assertIsNone(elite.down)
+        self.assertIsNone(badobject.down)
+
+        # check up refs
+        self.assertIs(fourtytwo.up, top)
+        self.assertIs(leet.up, top.additional["branches"][0])
+        self.assertIs(elite.up, top.additional["branches"][1])
+        self.assertIs(badobject.up, top.additional["branches"][2])
+
+        # none of those shall have branches
+        self.assertEqual(fourtytwo.additional["branches"], [])
+        self.assertEqual(leet.additional["branches"], [])
+        self.assertEqual(elite.additional["branches"], [])
+        self.assertEqual(badobject.additional["branches"], [])
+
+        # none of the top level branches shall have any further branches
+        self.assertEqual(leet.up.additional["branches"], [])
+        self.assertEqual(elite.up.additional["branches"], [])
+        self.assertEqual(badobject.up.additional["branches"], [])
+
+        # check objtype annotations
+        #self.assertEqual(top.additional["objtype"])  UNDECIDED
+        self.assertEqual(fourtytwo.additional["objtype"], "int")
+        self.assertEqual(leet.additional["objtype"], "int")
+        self.assertEqual(elite.additional["objtype"], "int")
+        self.assertFalse("objtype" in badobject.additional)  # bad object gets no annotation
+
+        # Check unified tree hash
+        # Unprocessed objects shall be ignored ( = return an empty string as "hash")
+        fourtytwo_param_hash = str(hash(self.int_class + "0")) # check
+        fourtytwo_content_hash = str(hash(self.int_class + "42")) # check
+        fourtytwo_hash = fourtytwo_param_hash + fourtytwo_content_hash
+
+        leet_param_hash = str(hash(self.int_class + "1")) # check
+        leet_content_hash = str(hash(self.int_class + "1337")) # check
+        leet_hash = leet_param_hash + leet_content_hash
+
+        elite_param_hash = str(hash(self.int_class + "2")) # check
+        elite_content_hash = str(hash(self.int_class + "31337")) # check
+        elite_hash = elite_param_hash + elite_content_hash
+
+        badobj_param_hash = str(hash(self.int_class + "3")) # check
+        badobj_content_hash = ""
+        badobj_hash = badobj_param_hash + badobj_content_hash
+
+        deep = str(
+            hash(
+                str(obj.__class__) +  # top level object is a dict
+                fourtytwo_hash + leet_hash + elite_hash + badobj_hash
+            )
+        )
+        self.assertEqual(top.hash(), deep)
+
 
 # TODO: add more tests (dict at least)
