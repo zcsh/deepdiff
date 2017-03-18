@@ -124,9 +124,10 @@ class DeepHash(DeepBase, dict):
 
         if self._skip_this(parent_level):
             level.status = skipped
-        # TODO: maybe we should not include skipped objects at all
+        # maybe we should not include skipped objects at all...
         # but this means we need to skip if parent_level matches --
         # but that has already been generated as part of the tree :(
+        # Tests currently expect them to be present, too.
         else:
             content_level = parent_level.down
             self.__hash(content_level, parents_ids_added)
@@ -299,11 +300,10 @@ class DeepHash(DeepBase, dict):
 
         # Do nothing if any exclusion criteria matches
         if self._skip_this(level):
+            level.status = skipped
             return
-        # We're not including skipped items at all here.
         # NOTE: some kinds of exclusion matches can only be detected
         # in _handle_container_item().
-        # Over there, we do include those but mark them as skipped.
 
         # First, check for primitive types.
         # No matter how fancy your data structure, in the ends it's all just

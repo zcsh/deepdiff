@@ -260,6 +260,8 @@ class HashTextResult(ResultDict):
 
         if level.status is unprocessed:
             self[id(level.obj)] = unprocessed
+        elif level.status is skipped:
+            self[id(level.obj)] = skipped
         elif isinstance(level.obj, numbers):
             pass  # we don't include numbers in text view
         else:
