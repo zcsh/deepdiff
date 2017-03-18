@@ -24,7 +24,7 @@ import unittest
 from deepdiff import DeepHash
 from deepdiff.helper import py3, pypy3
 from deepdiff.model import unprocessed
-from tests import CustomClass
+from tests import CustomClass, Bad
 from collections import namedtuple
 import logging
 
@@ -195,15 +195,6 @@ class DeepHashTextTestCase(unittest.TestCase):
             DeepHash(1, wrong_param=2)
 
     def test_bad_attribute(self):
-        class Bad(object):
-            __slots__ = ['x', 'y']
-
-            def __getattr__(self, key):
-                raise AttributeError("Bad item")
-
-            def __str__(self):
-                return "Bad Object"
-
         t1 = Bad()
 
         result = DeepHash(t1)
@@ -211,15 +202,6 @@ class DeepHashTextTestCase(unittest.TestCase):
         self.assertEqual(result, expected_result)
 
     def test_bad_in_list(self):
-        class Bad(object):
-            __slots__ = ['x', 'y']
-
-            def __getattr__(self, key):
-                raise AttributeError("Bad item")
-
-            def __str__(self):
-                return "Bad Object"
-
         bad = Bad()
         t1 = [42, 1337, 31337, bad]
 

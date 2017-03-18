@@ -18,3 +18,13 @@ class CustomClass(object):
 class CustomClassMisleadingRepr(CustomClass):
     def __str__(self):
         return "({}, {})".format(self.a, self.b)
+
+
+class Bad(object):
+    __slots__ = ['x', 'y']
+
+    def __getattr__(self, key):
+        raise AttributeError("Bad item")
+
+    def __str__(self):
+        return "Bad Object"

@@ -25,7 +25,7 @@ import re
 from decimal import Decimal
 from deepdiff import DeepDiff
 from deepdiff.helper import py3
-from tests import CustomClass
+from tests import CustomClass, Bad
 if py3:
     from unittest import mock
 else:
@@ -1493,15 +1493,6 @@ class DeepDiffTextTestCase(unittest.TestCase):
             DeepDiff(1, 1, wrong_param=2)
 
     def test_bad_attribute(self):
-        class Bad(object):
-            __slots__ = ['x', 'y']
-
-            def __getattr__(self, key):
-                raise AttributeError("Bad item")
-
-            def __str__(self):
-                return "Bad Object"
-
         t1 = Bad()
         t2 = Bad()
 
