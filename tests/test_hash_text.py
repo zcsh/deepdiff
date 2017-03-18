@@ -23,23 +23,11 @@ To run a specific test, run this from the root of repo:
 import unittest
 from deepdiff import DeepHash
 from deepdiff.helper import py3, pypy3
+from tests import CustomClass
 from collections import namedtuple
 import logging
 
 logging.disable(logging.CRITICAL)
-
-
-class CustomClass:
-    def __init__(self, a, b=None):
-        self.a = a
-        self.b = b
-
-    def __str__(self):
-        return "({}, {})".format(self.a, self.b)
-
-    def __repr__(self):
-        return self.__str__()
-
 
 def hash_and_format(obj):
     return "str:{}".format(hash(obj))
@@ -296,6 +284,11 @@ class DeepHashTextTestCase(unittest.TestCase):
         obj = [1, l1]
         result = DeepHash(obj, exclude_types={logging.Logger})
         self.assertTrue(id(l1) not in result)
+
+#    def test_hash_custom_object_single_attr(self):
+#        obj = CustomClass("vegan")
+#        result = DeepHash(obj)
+#        print(result)
 
 
 class DeepHashSHA1TestCase(unittest.TestCase):

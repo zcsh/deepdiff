@@ -25,21 +25,10 @@ from deepdiff import DeepHash
 from deepdiff.helper import py3, pypy3
 from deepdiff.model import HashLevel
 from collections import namedtuple
+from tests import CustomClass
 import logging
 
 logging.disable(logging.CRITICAL)
-
-
-class CustomClass:
-    def __init__(self, a, b=None):
-        self.a = a
-        self.b = b
-
-    def __str__(self):
-        return "({}, {})".format(self.a, self.b)
-
-    def __repr__(self):
-        return self.__str__()
 
 
 class DeepHashTreeTestCase(unittest.TestCase):

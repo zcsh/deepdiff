@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 
-from deepdiff.helper import py3, items, RemapDict, strings, short_repr, Verbose, NotPresentHere
+from deepdiff.helper import py3, items, RemapDict, strings, short_repr, Verbose
+from deepdiff.helper import NotPresentHere, numbers
+from collections import Iterable
+from collections import MutableMapping
 from ast import literal_eval
 from copy import copy
 
@@ -189,6 +192,11 @@ class HashTreeResult(ResultDict):
 
 
 class HashTextResult(ResultDict):
+    """
+    DeepHash's text style result is actually a flat view of all
+    objects in the tree.
+    Guess we should rename this.
+    """
     def __init__(self, tree_results=None):
         for key in HASH_REPORT_KEYS:
             self[key] = set()
@@ -201,10 +209,22 @@ class HashTextResult(ResultDict):
         :param DiffTreeResult tree: Source data
         :return:
         """
-        (level, ) = tree["hash"]  # only element in set
-        result = ""
-        while True:
-            break
+        root = tree["hash"]  # only element in set
+        self._from_tree_create_all_entries(root)
+
+    def _from_tree_create_all_entries(self, level):
+        # This builds a flat view of everything.
+        # Need to traverse all nodes.
+        for branch in level.all_branches():
+            self._from_tree_create_all_entries(branch.down)
+            if branch.child_rel.param_hash is not None:  # create separate entries for params *alone* (for compatibility)
+                self._from_tree_create_all_entries(branch.child_rel.param_hash["hash"])
+
+        if not isinstance(level.obj, numbers):  # we don't include numbers in text view
+            entry = level.text_view_hash()
+            if entry != "":
+                #print(str(id(level.obj)) + ":" + entry)
+                self[id(level.obj)] = entry
 
 
 class SearchTreeResult(ResultDict):
@@ -826,6 +846,70 @@ class HashLevel(BaseLevel):
 
         self._hash = str(self.hasher(concat))
         return self._hash
+
+    def text_view_hash(self):
+        """
+        TODO for text view
+        :rtype: str
+        """
+        # TODO: use .additional['objtype'] for everything instead of rechecking
+        # this of course requires that those'll be set consistently by DeepHash
+        # or, even better, DeepBase
+        if isinstance(self.obj, strings):
+            frame = "str:%s"
+            want_param = False
+
+        elif isinstance(self.obj, numbers):
+            frame = self.additional['objtype'] + ":%s"
+            want_param = False
+            # TODO float
+
+        elif isinstance(self.obj, MutableMapping):
+            frame = "dict:{%s}"
+            want_param = True
+
+        elif isinstance(self.obj, tuple):
+            if self.additional['objtype'] == 'tuple':
+                frame = "tuple:%s"
+                want_param = False
+            elif self.additional['objtype'] == 'namedtuple':
+                frame = "ntdict:{%s}"
+                want_param = True
+
+        elif isinstance(self.obj, (set, frozenset)):
+            frame = "set:%s"
+            want_param = False
+
+        elif isinstance(self.obj, Iterable):
+            frame = "list:%s"
+            want_param = False
+
+        else:
+            frame = "objdict:{%s}"
+            want_param = True
+
+        if want_param:
+            sep_items = ";"
+        else:
+            sep_items = ','
+
+        if self.leaf_hash is not None:
+            contents = [str(self.leaf_hash)]
+        else:
+            contents = []
+            for branch in self.all_branches():
+                if branch.down is not None:  # should always be true
+                    subresult = branch.down.text_view_hash()
+                    if want_param:
+                        param_str = branch.child_rel.param_hash["hash"].text_view_hash()
+                        subresult = param_str + ":" + subresult
+                    contents.append(subresult)
+        contents.sort()
+
+        content = sep_items.join(contents)
+
+        result = frame % content
+        return result
 
 
 class SearchLevel(BaseLevel):

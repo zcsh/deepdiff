@@ -277,11 +277,13 @@ class DeepHash(DeepBase, dict):
             if set(obj_s) <= set("-0."):
                 obj_s = "0.00"
             level.leaf_hash = obj_s
+            level.additional["objtype"] = "number"  # TODO: this is not very precise
             #result = "number:{}".format(obj_s)
             #obj_id = id(obj)
             #self[obj_id] = result
         else:
             #result = "{}:{}".format(type(obj).__name__, obj)
+            level.additional["objtype"] = type(level.obj).__name__  # NOTE do we really want this?
             level.leaf_hash = level.obj
 
     def __hash_tuple(self, level, parents_ids):
@@ -296,9 +298,11 @@ class DeepHash(DeepBase, dict):
             level.obj._asdict
         # It must be a normal tuple
         except AttributeError:
+            level.additional["objtype"] = 'tuple'  # TODO: move this stuff to base
             self.__hash_iterable(level, parents_ids)
         # We assume it is a namedtuple then
         else:
+            level.additional["objtype"] = 'namedtuple'
             self.__hash_obj(level, parents_ids, is_namedtuple=True)
 
     def __hash(self, level, parents_ids=frozenset({})):
