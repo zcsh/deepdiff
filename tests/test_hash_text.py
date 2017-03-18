@@ -206,12 +206,12 @@ class DeepHashTextTestCase(unittest.TestCase):
 
     def test_bad_in_list(self):
         bad = Bad()
-        t1 = [42, 1337, 31337, bad]
+        t1 = [bad, 1337, 31337, 42]
 
         result = DeepHash(t1)
         expected_result = {
             id(bad): unprocessed,
-            id(t1): "list:int:42,int:1337,int:31337,Error: Unprocessed",
+            id(t1): "list:Error: Unprocessed,int:1337,int:31337,int:42",
             'unprocessed': [bad]
         }
         self.assertEqual(result, expected_result)
