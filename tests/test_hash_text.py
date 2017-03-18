@@ -23,6 +23,7 @@ To run a specific test, run this from the root of repo:
 import unittest
 from deepdiff import DeepHash
 from deepdiff.helper import py3, pypy3
+from deepdiff.model import unprocessed
 from tests import CustomClass
 from collections import namedtuple
 import logging
@@ -207,6 +208,27 @@ class DeepHashTextTestCase(unittest.TestCase):
 
         result = DeepHash(t1)
         expected_result = {id(t1): result.unprocessed, 'unprocessed': [t1]}
+        self.assertEqual(result, expected_result)
+
+    def test_bad_in_list(self):
+        class Bad(object):
+            __slots__ = ['x', 'y']
+
+            def __getattr__(self, key):
+                raise AttributeError("Bad item")
+
+            def __str__(self):
+                return "Bad Object"
+
+        bad = Bad()
+        t1 = [42, 1337, 31337, bad]
+
+        result = DeepHash(t1)
+        expected_result = {
+            id(bad): unprocessed,
+            id(t1): "list:int:42,int:1337,int:31337,Error: Unprocessed",
+            'unprocessed': [bad]
+        }
         self.assertEqual(result, expected_result)
 
     def test_repetition_by_default_does_not_effect(self):

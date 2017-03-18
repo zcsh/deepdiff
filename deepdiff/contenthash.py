@@ -15,9 +15,7 @@ from deepdiff.model import HashTextResult, HashTreeResult, HashLevel
 from deepdiff.model import DictRelationship, AttributeRelationship
 from deepdiff.model import SubscriptableIterableRelationship, NonSubscriptableIterableRelationship, SetRelationship
 from deepdiff.base import DeepBase
-
-# drop those?
-from deepdiff.model import Unprocessed, Skipped, NotHashed
+from deepdiff.model import unprocessed, skipped, not_hashed
 
 logger = logging.getLogger(__name__)
 
@@ -62,9 +60,9 @@ class DeepHash(DeepBase, dict):
         # Define some error objects
         # TODO: should remove those definitions -- just keeping them now for test compat
         #       users can just import those from model themselves
-        self.unprocessed = Unprocessed
-        self.skipped = Skipped
-        self.not_hashed = NotHashed
+        self.unprocessed = unprocessed
+        self.skipped = skipped
+        self.not_hashed = not_hashed
 
         # Prepare result tree, perform the actual hashing and clean up
         self.tree = HashTreeResult()
@@ -147,7 +145,7 @@ class DeepHash(DeepBase, dict):
             except AttributeError:
                 # we're out of ideas
                 self._report_result(level, 'unprocessed')
-                level.status = Unprocessed
+                level.status = unprocessed
                 return
 
         self.__hash_dict(level, parents_ids,

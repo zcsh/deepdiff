@@ -42,28 +42,31 @@ class DoesNotExist(Exception):
 
 # The following three classes are only used in DeepHash for text style result compatibility.
 # I think we can probably drop those from the interface without causing too much trouble.
-class Skipped(Exception):
+class Skipped(object):
     def __repr__(self):
         return "Skipped"  # pragma: no cover
 
     def __str__(self):
         return "Skipped"  # pragma: no cover
+skipped = Skipped()
 
 
-class Unprocessed(Exception):
+class Unprocessed(object):
     def __repr__(self):
         return "Error: Unprocessed"  # pragma: no cover
 
     def __str__(self):
         return "Error: Unprocessed"  # pragma: no cover
+unprocessed = Unprocessed()
 
 
-class NotHashed(Exception):
+class NotHashed(object):
     def __repr__(self):
         return "Error: NotHashed"  # pragma: no cover
 
     def __str__(self):
         return "Error: NotHashed"  # pragma: no cover
+not_hashed = NotHashed()
 
 
 class ResultDict(RemapDict):
@@ -255,8 +258,8 @@ class HashTextResult(ResultDict):
             if branch.child_rel.param_hash is not None:  # create separate entries for params *alone* (for compatibility)
                 self._from_tree_create_all_entries(branch.child_rel.param_hash["hash"])
 
-        if level.status == Unprocessed:
-            self[id(level.obj)] = Unprocessed
+        if level.status is unprocessed:
+            self[id(level.obj)] = unprocessed
         elif isinstance(level.obj, numbers):
             pass  # we don't include numbers in text view
         else:
@@ -798,7 +801,7 @@ class HashLevel(BaseLevel):
 
         self.status = True  # true means everythin' peachy
         """
-        Shall be set to Unprocessed if we cannot hash this levels obj
+        Shall be set to unprocessed (global object) if we cannot hash this levels obj
         and/or cannot procede down the object tree from here although this does not
         seem to be a leaf.
         Shall be set to Skipped if this object meets exclusion criteria.
@@ -902,6 +905,9 @@ class HashLevel(BaseLevel):
         TODO for text view
         :rtype: str
         """
+        if self.status != True:
+            return str(self.status)
+
         # TODO: use .additional['objtype'] for everything instead of rechecking
         # this of course requires that those'll be set consistently by DeepHash
         # or, even better, DeepBase
@@ -968,6 +974,7 @@ class HashLevel(BaseLevel):
 
         result = frame % content
         return result
+
 
 
 class SearchLevel(BaseLevel):
