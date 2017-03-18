@@ -954,6 +954,9 @@ class HashLevel(BaseLevel):
 
         elif isinstance(self.obj, Iterable):
             frame = "list:%s"
+            want_sort = True
+            # Why do we sort list objects in text view?
+            # Lists are ordered containers. This is basically a collision.
 
         else:
             frame = "objdict:{%s}"

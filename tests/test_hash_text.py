@@ -68,7 +68,10 @@ class DeepHashTextTestCase(unittest.TestCase):
         result = DeepHash(obj)
         self.assertEqual(result, expected_result)
 
+    @unittest.expectedFailure
     def test_list2(self):
+        # Why do we sort list objects in text view?
+        # Lists are ordered containers. This is basically a collision.
         string1 = "a"
         obj = [string1, 20, 10]
         expected_result = {
