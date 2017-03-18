@@ -905,38 +905,45 @@ class HashLevel(BaseLevel):
         # TODO: use .additional['objtype'] for everything instead of rechecking
         # this of course requires that those'll be set consistently by DeepHash
         # or, even better, DeepBase
+
+        # Do we need to include the child relationship param in the text result?
+        want_param = False  # will be set to True for types which need this
+        # e.g. dict keys will be included
+
+        # Do we want to sort results alphabetically?
+        want_sort = False  # will be set to True for types which need this
+        # We mostly don't need this and for some types, e.g. list, this is prohibitive.
+        # For example, we do want to sort dicts though
+
         if isinstance(self.obj, strings):
             frame = "str:%s"
-            want_param = False
 
         elif isinstance(self.obj, numbers):
             frame = self.additional['objtype'] + ":%s"
-            want_param = False
-            # TODO float
 
         elif isinstance(self.obj, MutableMapping):
             frame = "dict:{%s}"
             want_param = True
+            want_sort = True
 
         elif isinstance(self.obj, tuple):
             if self.additional['objtype'] == 'tuple':
                 frame = "tuple:%s"
-                want_param = False
             elif self.additional['objtype'] == 'namedtuple':
                 frame = "ntdict:{%s}"
                 want_param = True
+                want_sort = True
 
         elif isinstance(self.obj, (set, frozenset)):
             frame = "set:%s"
-            want_param = False
 
         elif isinstance(self.obj, Iterable):
             frame = "list:%s"
-            want_param = False
 
         else:
             frame = "objdict:{%s}"
             want_param = True
+            want_sort = True
 
         if want_param:
             sep_items = ";"
@@ -954,7 +961,8 @@ class HashLevel(BaseLevel):
                         param_str = branch.child_rel.param_hash["hash"].text_view_hash()
                         subresult = param_str + ":" + subresult
                     contents.append(subresult)
-        contents.sort()
+        if want_sort:
+            contents.sort()
 
         content = sep_items.join(contents)
 

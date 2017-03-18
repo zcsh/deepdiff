@@ -67,6 +67,16 @@ class DeepHashTextTestCase(unittest.TestCase):
         result = DeepHash(obj)
         self.assertEqual(result, expected_result)
 
+    def test_list2(self):
+        string1 = "a"
+        obj = [string1, 20, 10]
+        expected_result = {
+            id(string1): hash_and_format(string1),
+            id(obj): 'list:str:%s,int:20,int:10' % hash(string1)
+        }
+        result = DeepHash(obj)
+        self.assertEqual(result, expected_result)
+
     def test_tuple(self):
         string1 = "a"
         obj = (string1, 10, 20)
