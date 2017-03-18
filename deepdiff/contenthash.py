@@ -116,18 +116,20 @@ class DeepHash(DeepBase, dict):
             return
         parents_ids_added = self._add_to_frozen_set(parents_ids, item_id)
 
-        #if self.__skip_this(parent_level)
-        # TODO: need to skip if parent_level matches --
-        # but that is already part of the tree once generated :(
-
         parent_level = level.new_entry(
             item,
             child_relationship_class=rel_class,
             child_relationship_param=rel_param)
         parent_level.child_rel.param_hash = DeepHash(rel_param, view="tree")  # TODO do we really want another DeepHash object here?
 
-        content_level = parent_level.down
-        self.__hash(content_level, parents_ids_added)
+        if self._skip_this(parent_level):
+            level.status = skipped
+        # TODO: maybe we should not include skipped objects at all
+        # but this means we need to skip if parent_level matches --
+        # but that has already been generated as part of the tree :(
+        else:
+            content_level = parent_level.down
+            self.__hash(content_level, parents_ids_added)
 
     def __hash_obj(self, level, parents_ids=frozenset({}), is_namedtuple=False):
         """
@@ -298,6 +300,10 @@ class DeepHash(DeepBase, dict):
         # Do nothing if any exclusion criteria matches
         if self._skip_this(level):
             return
+        # We're not including skipped items at all here.
+        # NOTE: some kinds of exclusion matches can only be detected
+        # in _handle_container_item().
+        # Over there, we do include those but mark them as skipped.
 
         # First, check for primitive types.
         # No matter how fancy your data structure, in the ends it's all just
