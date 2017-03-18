@@ -120,7 +120,9 @@ class DeepHash(DeepBase, dict):
             item,
             child_relationship_class=rel_class,
             child_relationship_param=rel_param)
-        parent_level.child_rel.param_hash = DeepHash(rel_param, view="tree")  # TODO do we really want another DeepHash object here?
+        parent_level.child_rel.param_hash = DeepHash(rel_param,
+                                                     view="tree",
+                                                     hasher=self.hasher)
 
         if self._skip_this(parent_level):
             level.status = skipped
