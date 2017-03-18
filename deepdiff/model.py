@@ -40,6 +40,32 @@ class DoesNotExist(Exception):
     pass
 
 
+# The following three classes are only used in DeepHash for text style result compatibility.
+# I think we can probably drop those from the interface without causing too much trouble.
+class Skipped(Exception):
+    def __repr__(self):
+        return "Skipped"  # pragma: no cover
+
+    def __str__(self):
+        return "Skipped"  # pragma: no cover
+
+
+class Unprocessed(Exception):
+    def __repr__(self):
+        return "Error: Unprocessed"  # pragma: no cover
+
+    def __str__(self):
+        return "Error: Unprocessed"  # pragma: no cover
+
+
+class NotHashed(Exception):
+    def __repr__(self):
+        return "Error: NotHashed"  # pragma: no cover
+
+    def __str__(self):
+        return "Error: NotHashed"  # pragma: no cover
+
+
 class ResultDict(RemapDict):
     def cleanup(self):
         """
@@ -212,15 +238,28 @@ class HashTextResult(ResultDict):
         root = tree["hash"]  # only element in set
         self._from_tree_create_all_entries(root)
 
+        self["unprocessed"] = []
+        if "unprocessed" in tree:
+            for item in tree["unprocessed"]:
+                self["unprocessed"].append(item.obj)
+
     def _from_tree_create_all_entries(self, level):
         # This builds a flat view of everything.
         # Need to traverse all nodes.
         for branch in level.all_branches():
+            # first off, here's a special case when level is unprocessed
+            if branch.status is Unprocessed:
+                break
+
             self._from_tree_create_all_entries(branch.down)
             if branch.child_rel.param_hash is not None:  # create separate entries for params *alone* (for compatibility)
                 self._from_tree_create_all_entries(branch.child_rel.param_hash["hash"])
 
-        if not isinstance(level.obj, numbers):  # we don't include numbers in text view
+        if level.status == Unprocessed:
+            self[id(level.obj)] = Unprocessed
+        elif isinstance(level.obj, numbers):
+            pass  # we don't include numbers in text view
+        else:
             entry = level.text_view_hash()
             if entry != "":
                 #print(str(id(level.obj)) + ":" + entry)
@@ -756,6 +795,17 @@ class HashLevel(BaseLevel):
         """
 
         self.additional["branches"] = []
+
+        self.status = True  # true means everythin' peachy
+        """
+        Shall be set to Unprocessed if we cannot hash this levels obj
+        and/or cannot procede down the object tree from here although this does not
+        seem to be a leaf.
+        Shall be set to Skipped if this object meets exclusion criteria.
+        TODO: We probably should not include those at all in both of these two cases.
+        For the moment however, it was easier this way.
+        And it provides backwards compatibility for text style view.
+        """
 
     def level_contents(self):
         yield self.content

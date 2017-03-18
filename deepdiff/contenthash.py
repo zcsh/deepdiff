@@ -16,31 +16,10 @@ from deepdiff.model import DictRelationship, AttributeRelationship
 from deepdiff.model import SubscriptableIterableRelationship, NonSubscriptableIterableRelationship, SetRelationship
 from deepdiff.base import DeepBase
 
+# drop those?
+from deepdiff.model import Unprocessed, Skipped, NotHashed
+
 logger = logging.getLogger(__name__)
-
-
-class Skipped(object):  # TODO no longer used here, move to view generation / HashTreeResult
-    def __repr__(self):
-        return "Skipped"  # pragma: no cover
-
-    def __str__(self):
-        return "Skipped"  # pragma: no cover
-
-
-class Unprocessed(object):  # TODO no longer used here, move to view generation / HashTreeResult
-    def __repr__(self):
-        return "Error: Unprocessed"  # pragma: no cover
-
-    def __str__(self):
-        return "Error: Unprocessed"  # pragma: no cover
-
-
-class NotHashed(object):  # TODO no longer used here, move to view generation / HashTreeResult
-    def __repr__(self):
-        return "Error: NotHashed"  # pragma: no cover
-
-    def __str__(self):
-        return "Error: NotHashed"  # pragma: no cover
 
 
 class DeepHash(DeepBase, dict):
@@ -80,11 +59,12 @@ class DeepHash(DeepBase, dict):
         #hashes = hashes if hashes else {}
         #self.update(hashes)
 
-        # REMOVED --> HashResult
-        #self['unprocessed'] = []
-        #self.unprocessed = Unprocessed()
-        #self.skipped = Skipped()
-        #self.not_hashed = NotHashed()
+        # Define some error objects
+        # TODO: should remove those definitions -- just keeping them now for test compat
+        #       users can just import those from model themselves
+        self.unprocessed = Unprocessed
+        self.skipped = Skipped
+        self.not_hashed = NotHashed
 
         # Prepare result tree, perform the actual hashing and clean up
         self.tree = HashTreeResult()
@@ -166,7 +146,9 @@ class DeepHash(DeepBase, dict):
                 obj = {i: getattr(level.obj, i) for i in level.obj.__slots__}
             except AttributeError:
                 # we're out of ideas
-                return self._report_result(level, 'unprocessed')
+                self._report_result(level, 'unprocessed')
+                level.status = Unprocessed
+                return
 
         self.__hash_dict(level, parents_ids,
                          print_as_attribute=True,
