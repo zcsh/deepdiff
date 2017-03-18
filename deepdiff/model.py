@@ -944,6 +944,9 @@ class HashLevel(BaseLevel):
         elif isinstance(self.obj, tuple):
             if self.additional['objtype'] == 'tuple':
                 frame = "tuple:%s"
+                want_sort = True
+                # Why do we sort tuples in text view?
+                # Tuples are ordered containers. This is basically a collision.
             elif self.additional['objtype'] == 'namedtuple':
                 frame = "ntdict:{%s}"
                 want_param = True
