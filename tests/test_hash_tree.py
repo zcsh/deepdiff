@@ -41,7 +41,7 @@ class DeepHashTreeTestCase(unittest.TestCase):
 
     def test_str(self):
         obj = "a"
-        result = DeepHash(obj, view="tree", hasher=hash)
+        result = DeepHash(obj, view="tree", hasher=hash, ignore_repetition=False)
         result_level = result["hash"]
 
         # This DeepHash has only one single level (which is therefore a leaf node)
@@ -57,7 +57,7 @@ class DeepHashTreeTestCase(unittest.TestCase):
     def test_list(self):
         string1 = "a"
         obj = [string1, 10, 20]
-        result = DeepHash(obj, view="tree", hasher=hash)
+        result = DeepHash(obj, view="tree", hasher=hash, ignore_repetition=False)
         result_level = result["hash"]
 
         # This DeepHash has two levels
@@ -121,7 +121,7 @@ class DeepHashTreeTestCase(unittest.TestCase):
         bad = Bad()
         obj = [42, 1337, 31337, bad]
 
-        result = DeepHash(obj, view='tree')
+        result = DeepHash(obj, view='tree', ignore_repetition=False)
         top = result["hash"]
 
         # check object structure:

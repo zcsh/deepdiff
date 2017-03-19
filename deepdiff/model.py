@@ -69,6 +69,15 @@ class NotHashed(object):
 not_hashed = NotHashed()
 
 
+class Repetition(object):
+    def __repr__(self):
+        return "Repetition"  # pragma: no cover
+
+    def __str__(self):
+        return "Repetition"  # pragma: no cover
+repetition = Repetition()
+
+
 class ResultDict(RemapDict):
     def cleanup(self):
         """
@@ -810,6 +819,11 @@ class HashLevel(BaseLevel):
         Cached result of hash()
         """
 
+        self._hash_wo_params = None
+        """
+        Cached result of hash() if ignoring child relationship parameters
+        """
+
         self.additional["branches"] = []
 
         self.status = True  # true means everythin' peachy
@@ -879,20 +893,29 @@ class HashLevel(BaseLevel):
                                child_relationship_class=child_relationship_class,
                                child_relationship_param=child_relationship_param)
             self.down.hasher = self.hasher  # TODO move somewhere else
+            if "ignore_repetition" in self.additional:  # dito
+                self.down.additional["ignore_repetition"] = self.additional["ignore_repetition"]
             return self
         else:
             # This is an additional branch.
             # Create a new chain and store it in .additional["branches"]
             new_branch = self.copy_single_level(shall_have_up=False, shall_have_down=False)
             new_branch.child_rel = None  # TODO move this to copy_single_level()
+            new_branch._hash = None  # dito
+            new_branch._hash_wo_params = None  # dito
+            new_branch.status = True  # dito
             new_branch.hasher = self.hasher  # TODO move somewhere else
             new_branch.additional["branches"] = []  # new branch has no additional branches
+            if "ignore_repetition" in self.additional:  # dito
+                new_branch.additional["ignore_repetition"] = self.additional["ignore_repetition"]
             self.additional["branches"].append(new_branch)
             new_branch.create_deeper(
                 new_objs=[new_obj],
                 child_relationship_class=child_relationship_class,
                 child_relationship_param=child_relationship_param)
             new_branch.down.hasher = self.hasher  # TODO move somewhere else
+            if "ignore_repetition" in self.additional:  # dito
+                new_branch.down.additional["ignore_repetition"] = self.additional["ignore_repetition"]
             return new_branch
 
     def all_branches(self):
@@ -904,7 +927,7 @@ class HashLevel(BaseLevel):
         if self.additional["branches"]:
             yield from self.additional["branches"]
 
-    def hash(self):
+    def hash(self, include_params=None):
         """
         Produce a real, single deep hash value starting at this level.
         Result shall be a single string with the output length of the hash
@@ -924,8 +947,19 @@ class HashLevel(BaseLevel):
         # TODO possibe collisions? e.g. deep vs broad containers?
         #      this is probably not a secure hash yet
 
-        if self._hash is not None:  # cached?
-            return self._hash
+        if include_params is None:
+            if "ignore_repetition" in self.additional and self.additional["ignore_repetition"]:
+                include_params = False
+            else:
+                include_params = True
+
+        # separate caches for include_params True/False
+        if include_params:
+            if self._hash is not None:  # cached?
+                return self._hash
+        else:
+            if self._hash_wo_params is not None:
+                return self._hash_wo_params
 
         if self.status is not True:
             self._hash = ""
@@ -937,20 +971,59 @@ class HashLevel(BaseLevel):
             concat += str(self.leaf_hash)
         else:
             for branch in self.all_branches():
-                param_hash = branch.child_rel.param_hash["hash"].hash()
+                if "ignore_repetition" in self.additional and self.additional["ignore_repetition"] and \
+                                branch.status is repetition:
+                    continue  # skip repetitions if requested
+
+                if include_params:
+                    param_hash = branch.child_rel.param_hash["hash"].hash(include_params)
+                else:
+                    param_hash = ""
                 child_hash = branch.down.hash()
                 concat += param_hash + child_hash
 
-        self._hash = str(self.hasher(concat))
-        return self._hash
+        hashval = str(self.hasher(concat))
+
+        if include_params:
+            self._hash = hashval
+        else:
+            self._hash_wo_params = hashval
+        self.mark_repetitions()  # for ignore_repetition only
+        return hashval
+
+    def mark_repetitions(self):
+        """
+        Tag my branches as repetition if they have the same hash as I do.
+        If ignore_repetition is set, these tags will later be used to... well, ignore repetitions.
+        """
+        # TODO test unified hash w/ ignore repetition
+        if "ignore_repetition" in self.additional and self.additional["ignore_repetition"]:
+            for branch in self.all_branches():
+                if branch is self:
+                    continue  # I'm not my own repetition
+                if branch.down.hash(include_params=False) == self.down.hash(include_params=False):
+                    # A branch is my repetition if my child is equal to their child.
+                    # Note that we must not compare the branch's hash to mine without going
+                    # down first as my branch represents the same object as I do
+                    # (if I represent a list my branch represents a same list,
+                    # but my down may represent the first list item while the branch's down
+                    # may represent the second one)
+                    # but if I have branches, my branches by definition don't.
+                    branch.status = repetition
+                else:
+                    pass
 
     def text_view_hash(self):
         """
         TODO for text view
         :rtype: str
         """
-        if self.status != True:
+        if self.status is repetition:
+            return ""
+        if self.status is not True:
             return str(self.status)
+
+        self.mark_repetitions()  # for ignore_repetition only
 
         # TODO: use .additional['objtype'] for everything instead of rechecking
         # this of course requires that those'll be set consistently by DeepHash
@@ -1011,6 +1084,9 @@ class HashLevel(BaseLevel):
         else:
             contents = []
             for branch in self.all_branches():
+                if "ignore_repetition" in self.additional and self.additional["ignore_repetition"] and \
+                                branch.status is repetition:
+                    continue
                 if branch.down is not None:  # should always be true
                     subresult = branch.down.text_view_hash()
                     if want_param:
