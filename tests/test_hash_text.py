@@ -303,6 +303,27 @@ class DeepHashTextTestCase(unittest.TestCase):
         expected_result = {id(obj): 'list:int:1'}
         self.assertEqual(result, expected_result)
 
+    def test_significant_digits(self):
+        t1 = [3.1415927]
+        t2 = [3.142]
+        hash1 = DeepHash(t1, view='text', significant_digits=2)
+        hash2 = DeepHash(t2, view='text', significant_digits=2)
+        self.assertEqual(hash1[id(t1)], hash2[id(t2)])
+
+    def test_significant_digits_false(self):
+        t1 = [3.1415927]
+        t2 = [3.14]
+        hash1 = DeepHash(t1, view='text', significant_digits=3)
+        hash2 = DeepHash(t2, view='text', significant_digits=3)
+        self.assertNotEqual(hash1[id(t1)], hash2[id(t2)])
+
+    def test_significant_digits_false2(self):
+        t1 = [3.1415927]
+        t2 = [3.14]
+        hash1 = DeepHash(t1, view='text', significant_digits=256)  # good luck finding those
+        hash2 = DeepHash(t2, view='text', significant_digits=256)
+        self.assertNotEqual(hash1[id(t1)], hash2[id(t2)])
+
     @unittest.expectedFailure
     def test_hash_iterable_with_excluded_type(self):
         # I don't quite get this test. Why do we expect l1 not to appear in results at all here

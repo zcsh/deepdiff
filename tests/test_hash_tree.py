@@ -201,5 +201,50 @@ class DeepHashTreeTestCase(unittest.TestCase):
         )
         self.assertEqual(top.hash(), deep)
 
+    def test_float(self):
+        t1 = 3.1415927
+        t2 = 3.143
+
+        hash1 = DeepHash(t1, view='tree')
+        hash2 = DeepHash(t2, view='tree')
+
+        self.assertNotEqual(hash1["hash"].leaf_hash, hash2["hash"].leaf_hash)
+        # Note: ^ different values v
+        self.assertNotEqual(hash1["hash"].hash(), hash2["hash"].hash())
+        # Note: ^ compares same values v
+        self.assertNotEqual(hash1, hash2)
+
+    def test_significant_digits(self):
+        t1 = 3.1415927
+        t2 = 3.142
+
+        hash1 = DeepHash(t1, view='tree', significant_digits=2)
+        hash2 = DeepHash(t2, view='tree', significant_digits=2)
+
+        self.assertEqual(hash1["hash"].leaf_hash, hash2["hash"].leaf_hash)
+        self.assertEqual(hash1["hash"].hash(), hash2["hash"].hash())
+        self.assertEqual(hash1, hash2)
+
+    def test_significant_false(self):
+        t1 = 3.1415927
+        t2 = 3.14
+
+        hash1 = DeepHash(t1, view='tree', significant_digits=3)
+        hash2 = DeepHash(t2, view='tree', significant_digits=3)
+
+        self.assertNotEqual(hash1["hash"].leaf_hash, hash2["hash"].leaf_hash)
+        self.assertNotEqual(hash1["hash"].hash(), hash2["hash"].hash())
+        self.assertNotEqual(hash1, hash2)
+
+    def test_significant_false2(self):
+        t1 = 3.1415927
+        t2 = 3.143
+
+        hash1 = DeepHash(t1, view='tree', significant_digits=256)
+        hash2 = DeepHash(t2, view='tree', significant_digits=256)
+
+        self.assertNotEqual(hash1["hash"].leaf_hash, hash2["hash"].leaf_hash)
+        self.assertNotEqual(hash1["hash"].hash(), hash2["hash"].hash())
+        self.assertNotEqual(hash1, hash2)
 
 # TODO: add more tests (dict at least)
