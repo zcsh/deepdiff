@@ -823,6 +823,27 @@ class HashLevel(BaseLevel):
         And it provides backwards compatibility for text style view.
         """
 
+    def __repr__(self):
+        result = "<Representing: " + str(self.obj)
+        if self.down is not None:
+            have_down = True
+            result += ", down: " + str(self.down.obj)
+        else:
+            have_down = False
+        if "branches" in self.additional and len(self.additional["branches"])>0:
+            if have_down:  # separator
+                result += "; "
+
+            result += "branching to: "
+            first = True
+            for branch in self.additional["branches"]:
+                if not first:
+                    result += ", "
+                first = False
+                result += str(branch.down.obj)
+        result += ">"
+        return result
+
     def level_contents(self):
         yield self.content
 
