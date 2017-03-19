@@ -126,6 +126,8 @@ class DeepHashTreeTestCase(unittest.TestCase):
 
         # check object structure:
         # get all levels, verify objects in place
+        self.assertEqual(top.obj, obj)
+
         fourtytwo = top.down
         self.assertEqual(fourtytwo.obj, 42)
 
@@ -160,6 +162,11 @@ class DeepHashTreeTestCase(unittest.TestCase):
         self.assertEqual(leet.up.additional["branches"], [])
         self.assertEqual(elite.up.additional["branches"], [])
         self.assertEqual(badobject.up.additional["branches"], [])
+
+        # top level branches reference the top level object
+        self.assertEqual(leet.up.obj, obj)
+        self.assertEqual(elite.up.obj, obj)
+        self.assertEqual(badobject.up.obj, obj)
 
         # check objtype annotations
         #self.assertEqual(top.additional["objtype"])  UNDECIDED
