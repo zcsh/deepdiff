@@ -471,24 +471,33 @@ class BaseLevel(object):
         :return: The leaf ("downmost") object of the copy.
         """
         orig = (self.all_up if full_path else self)
-        result = copy(orig)  # copy top level
 
-        if not full_path:     # just copying the bottom of this path,
-            result.up = None  # this means we don't include anything above this point
-
+        previous_level_copy = None
         while orig is not None:
-            for key in orig.level_content_keys():
-                result.__dict__[key] = orig.__dict__[key].copy()
-            result.additional = copy(orig.additional)
-
-            if orig.down is not None:  # copy and create references to the following level
-                # copy following level
-                result.down = copy(orig.down)
+            # perform copy
+            result = orig.copy_single_level(full_path)
+            if previous_level_copy:
+                previous_level_copy.down = result
 
             # descend to next level
             orig = orig.down
-            if result.down is not None:
-                result = result.down
+            previous_level_copy = result
+        return result
+
+    def copy_single_level(self, shall_have_up=True, shall_have_down=True):
+        result = copy(self)
+        if not shall_have_up:
+            result.up = None
+        if not shall_have_down:
+            result.down = None
+
+        # Deep copy attributes that need to be deep-copied
+        # TODO are we copying content objs here? o.O
+        # more tests fail if we comment this out
+        for key in self.level_content_keys():
+            result.__dict__[key] = self.__dict__[key].copy()
+        result.additional = copy(self.additional)
+
         return result
 
     def auto_generate_child_rel(self, klass, param):
@@ -840,8 +849,8 @@ class HashLevel(BaseLevel):
         :return The parent level object (which may or may not be the
                 object you called this method on
         """
-        if not self.down:
-            # this is the first branch we learn - just use down
+        if self.down is None:
+            # this is the first "branch" we learn - just use down
             # and extend this chain
             self.create_deeper(new_objs = [new_obj],
                                child_relationship_class=child_relationship_class,
