@@ -490,6 +490,8 @@ class BaseLevel(object):
             result.up = None
         if not shall_have_down:
             result.down = None
+            # TODO set child rels to None here
+            # this needs class methods telling us where those are in the concrete subclasses
 
         # Deep copy attributes that need to be deep-copied
         # TODO are we copying content objs here? o.O
@@ -860,7 +862,8 @@ class HashLevel(BaseLevel):
         else:
             # This is an additional branch.
             # Create a new chain and store it in .additional["branches"]
-            new_branch = self.copy(full_path=False)
+            new_branch = self.copy_single_level(shall_have_up=False, shall_have_down=False)
+            new_branch.child_rel = None  # TODO move this to copy_single_level()
             new_branch.hasher = self.hasher  # TODO move somewhere else
             new_branch.additional["branches"] = []  # new branch has no additional branches
             self.additional["branches"].append(new_branch)
