@@ -77,15 +77,30 @@ class DeepHash(DeepBase, dict):
 
         # Provide default view
         # Note: wasting storage here (just in case we ever implement compacting / exporting a storage-friendly diff)
+        self._text = None
         if view == 'tree':
             self.update(self.tree)
-            del self.tree
         else:
-            result_text = HashTextResult(tree_results=self.tree)
-            result_text.cleanup()  # clean up text-style result dictionary
-            self.update(
-                result_text
-            )  # be compatible to DeepDiff 2.x if user didn't specify otherwise
+            self.update(self.text)
+
+    @property
+    def text(self):
+        if self._text is None:
+            self._text = HashTextResult(tree_results=self.tree)
+            self._text.cleanup()  # clean up text-style result dictionary
+        return self._text
+
+    def __eq__(self, other):
+        if self.view == "text":
+            if isinstance(other, DeepHash):
+                return self.text == other.text
+            else:
+                return self.text == other
+        else:
+            return self.tree["hash"].hash() == other.tree["hash"].hash()
+
+
+    # TODO: provide sensible shortcut to self.tree["hash"]. .data? .raw? any ideas?
 
     @staticmethod
     def sha1hex(obj):
