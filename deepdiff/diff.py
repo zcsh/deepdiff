@@ -898,8 +898,9 @@ class DeepDiff(DeepBase, ResultDict):
             try:
                 hashes_all = DeepHash(item,
                                       hashes=self.hashes,
-                                      significant_digits=self.significant_digits)
-                item_hash = hashes_all.get(id(item), item)
+                                      significant_digits=self.significant_digits,
+                                      view="tree")
+                item_hash = hashes_all.tree["hash"].hash()
             except Exception as e:  # pragma: no cover
                 logger.warning("Can not produce a hash for %s."
                                "Not counting this object.\n %s" %
