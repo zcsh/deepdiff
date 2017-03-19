@@ -999,19 +999,23 @@ class HashLevel(BaseLevel):
         # TODO test unified hash w/ ignore repetition
         if "ignore_repetition" in self.additional and self.additional["ignore_repetition"]:
             for branch in self.all_branches():
-                if branch is self:
-                    continue  # I'm not my own repetition
-                if branch.down.hash(include_params=False) == self.down.hash(include_params=False):
-                    # A branch is my repetition if my child is equal to their child.
-                    # Note that we must not compare the branch's hash to mine without going
-                    # down first as my branch represents the same object as I do
-                    # (if I represent a list my branch represents a same list,
-                    # but my down may represent the first list item while the branch's down
-                    # may represent the second one)
-                    # but if I have branches, my branches by definition don't.
-                    branch.status = repetition
-                else:
-                    pass
+                for cmpto in self.all_branches():
+                    if cmpto is branch:
+                        continue  # I'm not my own repetition
+                    if cmpto.status == repetition:
+                        continue  # avoid marking circular repetitions
+                    # TODO: much to complicated. rework branches: chained branching, just one branch per object
+                    if branch.down.hash(include_params=False) == cmpto.down.hash(include_params=False):
+                        # A branch is my repetition if my child is equal to their child.
+                        # Note that we must not compare the branch's hash to mine without going
+                        # down first as my branch represents the same object as I do
+                        # (if I represent a list my branch represents a same list,
+                        # but my down may represent the first list item while the branch's down
+                        # may represent the second one)
+                        # but if I have branches, my branches by definition don't.
+                        branch.status = repetition
+                    else:
+                        pass
 
     def text_view_hash(self):
         """
