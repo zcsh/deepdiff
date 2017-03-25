@@ -896,27 +896,26 @@ class DeepDiff(DeepBase, ResultDict):
                 hashes[item_hash] = IndexedHash([i], item)
 
         hashes = {}
-        for (i, item) in enumerate(t):
-            try:
-                hashes_all = DeepHash(item,
-                                      hashes=self.hashes,
-                                      significant_digits=self.significant_digits,
-                                      view="tree",
-                                      exclude_paths=self.exclude_paths,
-                                      exclude_types=self.exclude_types,
-                                      rootstr=level.path(self.rootstr))
-                item_hash = hashes_all.tree["hash"].hash()
-            except Exception as e:  # pragma: no cover
-                logger.warning("Can not produce a hash for %s."
-                               "Not counting this object.\n %s" %
-                               (level.path(), e))
-            else:
-                if item_hash is hashes_all.unprocessed:  # pragma: no cover
-                    logger.warning("Item %s was not processed while hashing "
-                                   "thus not counting this object." %
-                                   level.path())
-                else:
-                    add_hash(hashes, item_hash, item, i)
+        dh = DeepHash(t,
+                      hashes=self.hashes,
+                      significant_digits=self.significant_digits,
+                      view="tree",
+                      exclude_paths=self.exclude_paths,
+                      exclude_types=self.exclude_types,
+                      rootstr=level.path(self.rootstr))
+        for dhparent in dh.tree["hash"].all_branches():
+            dhlevel = dhparent.down
+            i = dhparent.child_rel.param
+            item = dhlevel.obj
+            item_hash = dhlevel.hash()
+            print("t: {}, hash: {}".format(str(t), item_hash))
+            # TODO: HashLevel.hash() does not currently report unprocessed items
+            #if item_hash is hashes_all.unprocessed:  # pragma: no cover
+            #    logger.warning("Item %s was not processed while hashing "
+            #                   "thus not counting this object." %
+            #                   level.path())
+            #else:
+            add_hash(hashes, item_hash, item, i)
         return hashes
 
     def __diff_iterable_with_contenthash(self, level):
