@@ -27,10 +27,17 @@ class DeepBase(object):
                  exclude_paths=set(),
                  exclude_types=set(),
                  verbose_level=1,
-                 view='text'):
+                 view='text',
+                 rootstr='root'):
         self.view = view
         """
         Specifies the default view. Available views are 'text' and 'tree'.
+        """
+
+        self.rootstr=rootstr
+        """
+        A name or pythonic path for the root object. Any generated path strings
+        will start in this.
         """
 
         Verbose.level = verbose_level
@@ -88,7 +95,7 @@ class DeepBase(object):
         :rtype: bool
         """
         skip = False
-        mypath = level.path()
+        mypath = level.path(self.rootstr)
         if self.exclude_paths and mypath in self.exclude_paths:
             skip = True
         elif self.exclude_regex_paths and any(

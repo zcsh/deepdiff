@@ -622,6 +622,7 @@ class DeepDiff(DeepBase, ResultDict):
                  exclude_types=set(),
                  verbose_level=1,
                  view='text',
+                 rootstr='root',
                  **kwargs):
         if kwargs:
             raise ValueError((
@@ -634,7 +635,8 @@ class DeepDiff(DeepBase, ResultDict):
                           exclude_paths=exclude_paths,
                           exclude_types=exclude_types,
                           verbose_level=verbose_level,
-                          view=view)
+                          view=view,
+                          rootstr=rootstr)
         
         self.ignore_order = ignore_order
         self.report_repetition = report_repetition
@@ -899,7 +901,10 @@ class DeepDiff(DeepBase, ResultDict):
                 hashes_all = DeepHash(item,
                                       hashes=self.hashes,
                                       significant_digits=self.significant_digits,
-                                      view="tree")
+                                      view="tree",
+                                      exclude_paths=self.exclude_paths,
+                                      exclude_types=self.exclude_types,
+                                      rootstr=level.path(self.rootstr))
                 item_hash = hashes_all.tree["hash"].hash()
             except Exception as e:  # pragma: no cover
                 logger.warning("Can not produce a hash for %s."

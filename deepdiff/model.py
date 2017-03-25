@@ -974,6 +974,8 @@ class HashLevel(BaseLevel):
                 if "ignore_repetition" in self.additional and self.additional["ignore_repetition"] and \
                                 branch.status is repetition:
                     continue  # skip repetitions if requested
+                if branch.down.status is skipped:
+                    continue
 
                 if include_params:
                     param_hash = branch.child_rel.param_hash["hash"].hash(include_params)

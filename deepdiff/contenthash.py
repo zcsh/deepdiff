@@ -36,6 +36,7 @@ class DeepHash(DeepBase, dict):
                  ignore_repetition=True,
                  significant_digits=None,
                  view='text',
+                 rootstr='root',
                  **kwargs):
         if kwargs:
             raise ValueError(
@@ -47,7 +48,8 @@ class DeepHash(DeepBase, dict):
                           significant_digits=significant_digits,
                           exclude_paths=exclude_paths,
                           exclude_types=exclude_types,
-                          view=view)
+                          view=view,
+                          rootstr=rootstr)
 
         self.ignore_repetition = ignore_repetition
         self.hasher = hasher
@@ -138,9 +140,12 @@ class DeepHash(DeepBase, dict):
             child_relationship_param=rel_param)
         parent_level.child_rel.param_hash = DeepHash(rel_param,
                                                      view="tree",
-                                                     hasher=self.hasher)
+                                                     hasher=self.hasher,
+                                                     rootstr=parent_level.path(self.rootstr),
+                                                     exclude_paths=self.exclude_paths,
+                                                     exclude_types=self.exclude_types)
 
-        if self._skip_this(parent_level):
+        if self._skip_this(parent_level):  # TODO looks like bullshit - same path as level
             level.status = skipped
         # maybe we should not include skipped objects at all...
         # but this means we need to skip if parent_level matches --
