@@ -247,4 +247,60 @@ class DeepHashTreeTestCase(unittest.TestCase):
         self.assertNotEqual(hash1["hash"].hash(), hash2["hash"].hash())
         self.assertNotEqual(hash1, hash2)
 
+    def test_different_dict_different_hash(self):
+        t1 = {'a': 1, 'b': 2}
+        t2 = {'a': 1, 'b': 3}
+        hash1 = DeepHash(t1, view='tree')
+        hash2 = DeepHash(t2, view='tree')
+        self.assertNotEqual(hash1["hash"].hash(), hash2["hash"].hash())
+
+    def test_same_dict_same_hash(self):
+        t1 = {'b': 5, 'c': 4}
+        t2 = {'b': 5, 'c': 4}
+        hash1 = DeepHash(t1, view='tree')
+        hash2 = DeepHash(t2, view='tree')
+        self.assertEqual(hash1["hash"].hash(), hash2["hash"].hash())
+
+    def test_different_dict_exclude_path(self):
+        t1 = {'a': 1, 'b': 2}
+        t2 = {'a': 1, 'b': 3}
+        hash1 = DeepHash(t1, view='tree', exclude_paths={"root['b']"})
+        hash2 = DeepHash(t2, view='tree', exclude_paths={"root['b']"})
+        self.assertEqual(hash1["hash"].hash(), hash2["hash"].hash())
+
+    def test_same_dict_in_list_same_hash(self):
+        t1 = [{'b': 5, 'c': 4}]
+        t2 = [{'b': 5, 'c': 4}]
+        hash1 = DeepHash(t1, view='tree')
+        hash2 = DeepHash(t2, view='tree')
+        self.assertEqual(hash1["hash"].hash(), hash2["hash"].hash())
+
+    def test_different_dict_in_list_different_hash(self):
+        t1 = [{'a': 1, 'b': 2}]
+        t2 = [{'a': 1, 'b': 3}]
+        hash1 = DeepHash(t1, view='tree')
+        hash2 = DeepHash(t2, view='tree')
+        self.assertNotEqual(hash1["hash"].hash(), hash2["hash"].hash())
+
+    def test_different_dict_in_list_exclude_path(self):
+        t1 = [{'a': 1, 'b': 2}]
+        t2 = [{'a': 1, 'b': 3}]
+        hash1 = DeepHash(t1, view='tree', exclude_paths={"root[0]['b']"})
+        hash2 = DeepHash(t2, view='tree', exclude_paths={"root[0]['b']"})
+        self.assertEqual(hash1["hash"].hash(), hash2["hash"].hash())
+
+    def test_different_dict_in_list_exclude_path_additional_content(self):
+        t1 = [{'a': 1, 'b': 2}, {'b': 5, 'c': 4}]
+        t2 = [{'a': 1, 'b': 3}, {'b': 5, 'c': 4}]
+        hash1 = DeepHash(t1, view='tree', exclude_paths={"root[0]['b']"})
+        hash2 = DeepHash(t2, view='tree', exclude_paths={"root[0]['b']"})
+        self.assertEqual(hash1["hash"].hash(), hash2["hash"].hash())
+
+
 # TODO: add more tests (dict at least)
+
+
+class DeepHashSHA1TestCase(unittest.TestCase):
+    """DeepHash with SHA1 Tests."""
+    # TOD
+    pass
