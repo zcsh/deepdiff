@@ -282,11 +282,18 @@ class DeepHashTreeTestCase(unittest.TestCase):
         hash2 = DeepHash(t2, view='tree')
         self.assertNotEqual(hash1["hash"].hash(), hash2["hash"].hash())
 
-    def test_different_dict_in_list_exclude_path(self):
+    def test_different_dict_in_list_exclude_path_no_ignore(self):
         t1 = [{'a': 1, 'b': 2}]
         t2 = [{'a': 1, 'b': 3}]
-        hash1 = DeepHash(t1, view='tree', exclude_paths={"root[0]['b']"})
-        hash2 = DeepHash(t2, view='tree', exclude_paths={"root[0]['b']"})
+        hash1 = DeepHash(t1, view='tree', exclude_paths={"root[0]['b']"}, ignore_repetition=False)
+        hash2 = DeepHash(t2, view='tree', exclude_paths={"root[0]['b']"}, ignore_repetition=False)
+        self.assertEqual(hash1["hash"].hash(), hash2["hash"].hash())
+
+    def test_different_dict_in_list_exclude_path_ignore_repetition(self):
+        t1 = [{'a': 1, 'b': 2}]
+        t2 = [{'a': 1, 'b': 3}]
+        hash1 = DeepHash(t1, view='tree', exclude_paths={"root[0]['b']"}, ignore_repetition=True)
+        hash2 = DeepHash(t2, view='tree', exclude_paths={"root[0]['b']"}, ignore_repetition=True)
         self.assertEqual(hash1["hash"].hash(), hash2["hash"].hash())
 
     def test_different_dict_in_list_exclude_path_additional_content(self):
