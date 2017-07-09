@@ -991,6 +991,17 @@ class HashLevel(BaseLevel):
         else:
             self._hash_wo_params = hashval
         self.mark_repetitions()  # for ignore_repetition only
+
+
+        print("Hi! I'm " + str(self) + ", status " + str(self.status) + ", hashval " + hashval)
+        print("and BTW, my branches are...:")
+        for branch in self.all_branches():
+            if branch is not self:
+                print("Branch: " + str(branch) + ", status " + str(branch.status))
+                if branch.down is not None:
+                    print("--Down: " + str(branch.down) + ", status " + str(branch.down.status) )
+        print()
+
         return hashval
 
     def mark_repetitions(self):
