@@ -53,6 +53,23 @@ def short_repr(item, max_length=15):
     return item
 
 
+def encode_n_hash(obj, func):
+    """
+    Encode and hash an object using the hash function func (e.g. hashlib.sha1)
+    :return: A hex string
+    """
+    if func is hash:
+        return str(hash(obj))
+    else:
+        if py3:  # pragma: no cover
+            if isinstance(obj, str):
+                obj = obj.encode('utf-8')
+        else:  # pragma: no cover
+            if isinstance(obj, unicode):
+                obj = obj.encode('utf-8')
+        return func(obj).hexdigest()
+
+
 class ListItemRemovedOrAdded(object):  # pragma: no cover
     """Class of conditions to be checked"""
     pass

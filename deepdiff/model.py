@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from deepdiff.helper import py3, items, RemapDict, strings, short_repr, Verbose
-from deepdiff.helper import NotPresentHere, numbers
+from deepdiff.helper import NotPresentHere, numbers, encode_n_hash
 from collections import Iterable
 from collections import MutableMapping
 from ast import literal_eval
@@ -984,7 +984,7 @@ class HashLevel(BaseLevel):
                 child_hash = branch.down.hash()
                 concat += param_hash + child_hash
 
-        hashval = str(self.hasher(concat))
+        hashval = encode_n_hash(concat, self.hasher)
 
         if include_params:
             self._hash = hashval

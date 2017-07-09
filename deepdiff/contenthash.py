@@ -10,7 +10,7 @@ from decimal import Decimal
 from hashlib import sha1
 import logging
 
-from deepdiff.helper import py3, int, strings, numbers, items
+from deepdiff.helper import py3, int, strings, numbers, items, encode_n_hash
 from deepdiff.model import HashTextResult, HashTreeResult, HashLevel
 from deepdiff.model import DictRelationship, AttributeRelationship
 from deepdiff.model import SubscriptableIterableRelationship, NonSubscriptableIterableRelationship, SetRelationship
@@ -103,23 +103,6 @@ class DeepHash(DeepBase, dict):
 
 
     # TODO: provide sensible shortcut to self.tree["hash"]. .data? .raw? any ideas?
-
-    @staticmethod
-    def sha1hex(obj):
-        """Use Sha1 for more accuracy."""
-        if py3:  # pragma: no cover
-            if isinstance(obj, str):
-                obj = "{}:{}".format(type(obj).__name__, obj)
-                obj = obj.encode('utf-8')
-            elif isinstance(obj, bytes):
-                obj = type(obj).__name__.encode('utf-8') + b":" + obj
-        else:  # pragma: no cover
-            if isinstance(obj, unicode):
-                obj = u"{}:{}".format(type(obj).__name__, obj)
-                obj = obj.encode('utf-8')
-            elif isinstance(obj, str):
-                obj = type(obj).__name__ + ":" + obj
-        return sha1(obj).hexdigest()
 
     def __handle_container_item(self, level, item, rel_class, rel_param, parents_ids):
         """
@@ -264,7 +247,7 @@ class DeepHash(DeepBase, dict):
         This is not a container. Thus, this is a leaf of the object tree.
         --> No more branches! Yay!
         """
-        level.leaf_hash = self.hasher(level.obj)
+        level.leaf_hash = encode_n_hash(level.obj, self.hasher)
         #result = "str:{}".format(result)
         #self[obj_id] = result
         #return result
