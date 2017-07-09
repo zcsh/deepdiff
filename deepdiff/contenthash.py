@@ -107,7 +107,7 @@ class DeepHash(DeepBase, dict):
     def __handle_container_item(self, level, item, rel_class, rel_param, parents_ids):
         """
         This method is called by all methods handling containers.
-        Those specific method's job is to figure out how the appropriate
+        Those specific method's job is to figure out the appropriate
         ChildRelationship subclass and feeds us all items in this container
         one by one.
         """
