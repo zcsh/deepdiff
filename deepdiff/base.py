@@ -105,6 +105,7 @@ class DeepBase(object):
             for content in level.level_contents():
                 if isinstance(content.obj, self.exclude_types):
                     skip = True
+        print("Skip " + mypath + "? --> " + str(skip) + ". My root was " + self.rootstr )
         return skip
 
     # TODO: Move report_type back to Diff where it belongs,

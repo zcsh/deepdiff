@@ -765,11 +765,12 @@ class DiffLevel(BaseLevel):
 
 class HashLevel(BaseLevel):
     """
+    TODO revise documentation
     While the results of searches and diff are individual paths through the object tree
     (a search result basically gives you directions through the object tree until you arrive
     at your destination -- the object containing your search value;
     any single diff result gives you directions through both an left-hand and and right-hand object
-    tree until you arrive at the boint where those two diverge)
+    tree until you arrive at the point where those two diverge)
     hashing means traversing the whole tree.
     This means that a HashLevel always contains one single obj -- the object of the tree
     we're currently looking at -- but provides any number of child_rels.
@@ -786,11 +787,13 @@ class HashLevel(BaseLevel):
     # - A chain of *HashLevel* objects denotes just any path through the object tree
     #   from the root to any leaf.
     #   At all points where the payload object tree branches this chain references
-    #   (through .additional["branches"]) another chain that represents a path to another
-    #   leaf. This other chain will again reference additional chains whereever this
+    #   (.right) another chain that represents a path to another
+    #   leaf. This other chain will again reference additional chains wherever this
     #   subtree branches.
-    #   (To conserve memory, we'll only keep one complete root-to-leaf HashLevel chain
-    #   and the others will just start at their branching point.)
+    #   To conserve memory, we'll only keep one complete root-to-leaf HashLevel chain
+    #   and the others will just start at their branching point.
+    #   As replacement there's a .left at the top of a diverging chain that brings you back to the original one
+    #   which should have a .up
     #   - Therefore, a HashTreeResult contains just a single HashLevel "chain", which as explained
     #     is not really a single chain at all but a tree itself.
     """
@@ -904,7 +907,7 @@ class HashLevel(BaseLevel):
             new_branch._hash = None  # dito
             new_branch._hash_wo_params = None  # dito
             new_branch.status = True  # dito
-            new_branch.hasher = self.hasher  # TODO move somewhere else
+            new_branch.hasher = self.hasher  # TODO move somewhere else -- do we even need this?
             new_branch.additional["branches"] = []  # new branch has no additional branches
             if "ignore_repetition" in self.additional:  # dito
                 new_branch.additional["ignore_repetition"] = self.additional["ignore_repetition"]
