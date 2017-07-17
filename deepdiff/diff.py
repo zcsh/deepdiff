@@ -20,12 +20,14 @@ from decimal import Decimal
 from collections import Mapping
 from collections import Iterable
 
-from deepdiff.helper import py3, strings, numbers, ListItemRemovedOrAdded, NotPresentHere, IndexedHash, Verbose
-from deepdiff.base import DeepBase
-from deepdiff.model import RemapDict, ResultDict, DiffTextResult, DiffTreeResult, DiffLevel
-from deepdiff.model import DictRelationship, AttributeRelationship  # , REPORT_KEYS
-from deepdiff.model import SubscriptableIterableRelationship, NonSubscriptableIterableRelationship, SetRelationship
-from deepdiff.contenthash import DeepHash
+from .helper import py3, strings, numbers, ListItemRemovedOrAdded, IndexedHash, Verbose
+from .base import DeepBase
+from .model import NotPresentHere, RemapDict, ResultDict
+from .model.diffresult import DiffTextResult, DiffTreeResult
+from .model.difflevel import DiffLevel
+from .model.childrelationship import DictRelationship, AttributeRelationship, SetRelationship
+from .model.childrelationship import SubscriptableIterableRelationship, NonSubscriptableIterableRelationship
+from .contenthash import DeepHash
 
 if py3:  # pragma: no cover
     from itertools import zip_longest

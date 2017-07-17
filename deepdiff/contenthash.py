@@ -3,19 +3,18 @@
 from __future__ import absolute_import
 from __future__ import print_function
 import sys
-from collections import Iterable
-from collections import MutableMapping
-from collections import defaultdict
+from collections import Iterable, MutableMapping
 from decimal import Decimal
-from hashlib import sha1
 import logging
 
-from deepdiff.helper import py3, int, strings, numbers, items, encode_n_hash
-from deepdiff.model import HashTextResult, HashTreeResult, HashLevel
-from deepdiff.model import DictRelationship, AttributeRelationship
-from deepdiff.model import SubscriptableIterableRelationship, NonSubscriptableIterableRelationship, SetRelationship
-from deepdiff.base import DeepBase
-from deepdiff.model import unprocessed, skipped, not_hashed
+from .helper import py3, strings, numbers, encode_n_hash
+from .model import unprocessed, skipped, not_hashed
+from .model.hashresult import HashTextResult, HashTreeResult
+from .model.hashlevel import HashLevel
+from .model.childrelationship import (DictRelationship, AttributeRelationship,
+                                      SubscriptableIterableRelationship, NonSubscriptableIterableRelationship,
+                                      SetRelationship)
+from .base import DeepBase
 
 logger = logging.getLogger(__name__)
 

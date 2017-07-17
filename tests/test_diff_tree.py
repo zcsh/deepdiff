@@ -18,8 +18,9 @@ To run a specific test, run this from the root of repo:
 """
 import unittest
 from deepdiff import DeepDiff
-from deepdiff.helper import pypy3, NotPresentHere
-from deepdiff.model import DictRelationship, NonSubscriptableIterableRelationship
+from deepdiff.helper import pypy3
+from deepdiff.model import NotPresentHere
+from deepdiff.model.childrelationship import DictRelationship, NonSubscriptableIterableRelationship
 
 import logging
 logging.disable(logging.CRITICAL)

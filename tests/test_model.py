@@ -20,9 +20,10 @@ To run a specific test, run this from the root of repo:
 from unittest import TestCase
 import logging
 from tests import CustomClass, CustomClassMisleadingRepr
-from deepdiff.model import (DiffLevel, ChildRelationship, DictRelationship,
-                            SubscriptableIterableRelationship,
-                            AttributeRelationship)
+from deepdiff.model.difflevel import DiffLevel
+from deepdiff.model.childrelationship import (ChildRelationship, DictRelationship,
+                                              SubscriptableIterableRelationship,
+                                              AttributeRelationship)
 from deepdiff.helper import Verbose
 
 logging.disable(logging.CRITICAL)

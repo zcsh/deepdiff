@@ -26,6 +26,7 @@ from deepdiff.helper import py3, pypy3
 from deepdiff.model import unprocessed
 from tests import CustomClass, Bad
 from collections import namedtuple
+from hashlib import sha1
 import logging
 
 logging.disable(logging.CRITICAL)
@@ -347,7 +348,7 @@ class DeepHashSHA1TestCase(unittest.TestCase):
         expected_result = {
             id(obj): 'str:48591f1d794734cabf55f96f5a5a72c084f13ac0'
         }
-        result = DeepHash(obj, hasher=DeepHash.sha1hex)
+        result = DeepHash(obj, hasher=sha1)
         self.assertEqual(result, expected_result)
 
     def test_hash_str_fail_if_mutable(self):
@@ -361,10 +362,10 @@ class DeepHashSHA1TestCase(unittest.TestCase):
         expected_result = {
             id_obj1: 'str:48591f1d794734cabf55f96f5a5a72c084f13ac0'
         }
-        result = DeepHash(obj1, hasher=DeepHash.sha1hex)
+        result = DeepHash(obj1, hasher=sha1)
         self.assertEqual(result, expected_result)
         obj2 = "b"
-        result = DeepHash(obj2, hasher=DeepHash.sha1hex)
+        result = DeepHash(obj2, hasher=sha1)
         self.assertTrue(id_obj1 not in result)
 
     def test_bytecode(self):
@@ -377,7 +378,7 @@ class DeepHashSHA1TestCase(unittest.TestCase):
             expected_result = {
                 id(obj): 'str:48591f1d794734cabf55f96f5a5a72c084f13ac0'
             }
-        result = DeepHash(obj, hasher=DeepHash.sha1hex)
+        result = DeepHash(obj, hasher=sha1)
         self.assertEqual(result, expected_result)
 
     def test_list1(self):
@@ -388,7 +389,7 @@ class DeepHashSHA1TestCase(unittest.TestCase):
             id(obj):
             'list:int:10,int:20,str:48591f1d794734cabf55f96f5a5a72c084f13ac0'
         }
-        result = DeepHash(obj, hasher=DeepHash.sha1hex)
+        result = DeepHash(obj, hasher=sha1)
         self.assertEqual(result, expected_result)
 
     def test_dict1(self):
@@ -401,5 +402,5 @@ class DeepHashSHA1TestCase(unittest.TestCase):
             id(obj):
             'dict:{int:1:int:10;int:2:int:20;str:63216212fdf88fe0c838c36ab65278b9953000d6:str:48591f1d794734cabf55f96f5a5a72c084f13ac0}'
         }
-        result = DeepHash(obj, hasher=DeepHash.sha1hex)
+        result = DeepHash(obj, hasher=sha1)
         self.assertEqual(result, expected_result)

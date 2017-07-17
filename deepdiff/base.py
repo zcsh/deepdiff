@@ -12,7 +12,7 @@ from __future__ import print_function
 
 import re
 
-from deepdiff.helper import strings, numbers, ListItemRemovedOrAdded, NotPresentHere, IndexedHash, Verbose
+from .helper import strings, Verbose
 
 
 class DeepBase(object):
@@ -117,7 +117,7 @@ class DeepBase(object):
         (We'll create the text-style report from there later.)
         Note: For DeepHash this will only be called once.
               DeepHash produces only one "result" which is a tree by itself
-              (see comments in model.py for details).
+              (see comments in model/hashlevel.py for details).
         :param report_type: A well defined string key describing the type of change.
                             Examples: "set_item_added", "values_changed"
         :param parent: A DiffLevel object describing the objects in question in their

@@ -21,9 +21,8 @@ To run a specific test, run this from the root of repo:
     nosetests .\tests\test_hash_text.py:DeepHashTestCase.test_string_in_root
 """
 import unittest
-from deepdiff import DeepHash
-from deepdiff.helper import py3, pypy3
-from deepdiff.model import HashLevel
+from deepdiff.contenthash import DeepHash
+from deepdiff.model.hashlevel import HashLevel
 from collections import namedtuple
 from tests import CustomClass, Bad
 from hashlib import sha1
@@ -48,7 +47,7 @@ class DeepHashTreeTestCase(unittest.TestCase):
         # This DeepHash has only one single level (which is therefore a leaf node)
         self.assertEqual(result_level.up, None)
         self.assertEqual(result_level.down, None)
-        self.assertEqual(result_level.leaf_hash, hash(obj))
+        self.assertEqual(result_level.leaf_hash, str(hash(obj)))
         expected_deep_hash = str(
             hash(
                 str(obj.__class__) + str(hash(obj)))
@@ -77,7 +76,7 @@ class DeepHashTreeTestCase(unittest.TestCase):
         self.assertEqual(twenty_level.obj, 20)
 
         # check all raw leaf hashes
-        self.assertEqual(string_level.leaf_hash, hash(string1))
+        self.assertEqual(string_level.leaf_hash, str(hash(string1)))
         self.assertEqual(ten_level.leaf_hash, 10)
         self.assertEqual(twenty_level.leaf_hash, 20)
 

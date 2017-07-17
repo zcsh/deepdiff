@@ -45,6 +45,26 @@ EXPANDED_KEY_MAP = {  # pragma: no cover
     'oldvalue': 'old_value'}
 
 
+class RemapDict(dict):
+    """
+    Remap Dictionary.
+
+    For keys that have a new, longer name, remap the old key to the new key.
+    Other keys that don't have a new name are handled as before.
+    """
+
+    def __getitem__(self, old_key):
+        new_key = EXPANDED_KEY_MAP.get(old_key, old_key)
+        if new_key != old_key:
+            warn(
+                "DeepDiff Deprecation: %s is renamed to %s. Please start using "
+                "the new unified naming convention.", old_key, new_key)
+        if new_key in self:
+            return self.get(new_key)
+        else:  # pragma: no cover
+            raise KeyError(new_key)
+
+
 def short_repr(item, max_length=15):
     """Short representation of item if it is too long"""
     item = repr(item)
@@ -75,15 +95,6 @@ class ListItemRemovedOrAdded(object):  # pragma: no cover
     pass
 
 
-class NotPresentHere(object):  # pragma: no cover
-    """
-    In a change tree, this indicated that a previously existing object has been removed -- or will only be added
-    in the future.
-    We previously used None for this but this caused problem when users actually added and removed None. Srsly guys? :D
-    """
-    pass
-
-
 WARNING_NUM = 0
 
 
@@ -93,26 +104,6 @@ def warn(*args, **kwargs):
     if WARNING_NUM < 10:
         WARNING_NUM += 1
         logger.warning(*args, **kwargs)
-
-
-class RemapDict(dict):
-    """
-    Remap Dictionary.
-
-    For keys that have a new, longer name, remap the old key to the new key.
-    Other keys that don't have a new name are handled as before.
-    """
-
-    def __getitem__(self, old_key):
-        new_key = EXPANDED_KEY_MAP.get(old_key, old_key)
-        if new_key != old_key:
-            warn(
-                "DeepDiff Deprecation: %s is renamed to %s. Please start using "
-                "the new unified naming convention.", old_key, new_key)
-        if new_key in self:
-            return self.get(new_key)
-        else:  # pragma: no cover
-            raise KeyError(new_key)
 
 
 class Verbose(object):
