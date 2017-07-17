@@ -158,10 +158,15 @@ class BaseLevel(object):
             return None if result is None else "{}{}".format(root, result)
 
         result = ""
-        level = self.all_up  # start at the root
+        level = self
 
-        # traverse all levels of this relationship
-        while level and level is not self:
+        # traverse all levels of this chain up to the root
+        while True:
+            # prepare loop run
+            level = level.go_up()
+            if level is None:
+                break
+
             # get this level's relationship object
             next_rel = None
             for level_content in level.level_contents():
@@ -175,14 +180,11 @@ class BaseLevel(object):
             # Build path for this level
             item = next_rel.get_param_repr(force)
             if item:
-                result += item
+                result = item + result
             else:
                 # it seems this path is not representable as a string
                 result = None
                 break
-
-            # Prepare processing next level
-            level = level.go_down()
 
         self._path[force] = result
         result = None if result is None else "{}{}".format(root, result)
