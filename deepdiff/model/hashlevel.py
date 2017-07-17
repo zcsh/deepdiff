@@ -2,6 +2,7 @@
 
 from collections.abc import MutableMapping
 from collections import Iterable
+from copy import copy
 
 from .baselevel import BaseLevel
 from ..helper import encode_n_hash, strings, numbers
@@ -100,6 +101,20 @@ class HashLevel(BaseLevel):
         And it provides backwards compatibility for text style view.
         """
 
+    def copy(self):
+        """
+        Provides a copy of this single HashLevel that can be reused in another chain.
+        As we're copying only a single level, all information referring to other objects in our chain
+        will be missing from the copy (notably up, down, left, right and child_rel).
+        :return: 
+        """
+        obj = HashLevel(objs=[self.obj],
+                        hasher=self.hasher)
+        obj.status = self.status
+        obj.leaf_hash = self.leaf_hash
+        obj.additional = copy(self.additional)
+        return obj
+
     def __repr__(self):
         result = "<Representing: " + str(self.obj)
         if self.down is not None:
@@ -167,20 +182,14 @@ class HashLevel(BaseLevel):
             # This is an additional branch.
             # Create a new chain and store it as right.
             # Check first if I already have a right -- if so, the new branch will be their right.
-            new_branch = self.copy_single_level(shall_have_up=False, shall_have_down=False)
+            new_branch = self.copy()
             trunk = self
             while trunk.right is not None:
                 trunk = trunk.right
             trunk.right = new_branch
             new_branch.left = trunk
             new_branch.right = None
-            new_branch.child_rel = None  # TODO move this to copy_single_level()
-            new_branch._hash = None  # dito
-            new_branch._hash_wo_params = None  # dito
             new_branch.status = True  # dito
-            new_branch.hasher = self.hasher  # TODO move somewhere else -- do we even need this?
-            if "ignore_repetition" in self.additional:  # dito
-                new_branch.additional["ignore_repetition"] = self.additional["ignore_repetition"]
             new_branch.create_deeper(
                 new_objs=[new_obj],
                 child_relationship_class=child_relationship_class,

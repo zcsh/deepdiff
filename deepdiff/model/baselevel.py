@@ -190,6 +190,7 @@ class BaseLevel(object):
 
     def copy(self, full_path=True):
         """
+        TODO This is a mess
         Get a deep copy of this comparision line.
         Note: This does not copy ChildRelationships as those are considered
         immutable (--> the relationship between two objects is a fact and not
@@ -214,6 +215,9 @@ class BaseLevel(object):
         return result
 
     def copy_single_level(self, shall_have_up=True, shall_have_down=True):
+        """
+        TODO This is a mess
+        """
         result = copy(self)
         if not shall_have_up:
             result.up = None
