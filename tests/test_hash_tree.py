@@ -70,9 +70,9 @@ class DeepHashTreeTestCase(unittest.TestCase):
         # (one for every item in the list)
         string_level = result_level.down
         self.assertEqual(string_level.obj, string1)
-        ten_level = result_level.additional["branches"][0].down
+        ten_level = result_level.right.down
         self.assertEqual(ten_level.obj, 10)
-        twenty_level = result_level.additional["branches"][1].down
+        twenty_level = result_level.right.right.down
         self.assertEqual(twenty_level.obj, 20)
 
         # check all raw leaf hashes
@@ -131,13 +131,13 @@ class DeepHashTreeTestCase(unittest.TestCase):
         fourtytwo = top.down
         self.assertEqual(fourtytwo.obj, 42)
 
-        leet = top.additional["branches"][0].down
+        leet = top.right.down
         self.assertEqual(leet.obj, 1337)
 
-        elite = top.additional["branches"][1].down
+        elite = top.right.right.down
         self.assertEqual(elite.obj, 31337)
 
-        badobject = top.additional["branches"][2].down
+        badobject = top.right.right.right.down
         self.assertIs(badobject.obj, bad)
 
         # depth is 2 --> all children are leaves
@@ -148,20 +148,20 @@ class DeepHashTreeTestCase(unittest.TestCase):
 
         # check up refs
         self.assertIs(fourtytwo.up, top)
-        self.assertIs(leet.up, top.additional["branches"][0])
-        self.assertIs(elite.up, top.additional["branches"][1])
-        self.assertIs(badobject.up, top.additional["branches"][2])
+        self.assertIs(leet.up, top.right)
+        self.assertIs(elite.up, top.right.right)
+        self.assertIs(badobject.up, top.right.right.right)
 
         # none of those shall have branches
-        self.assertEqual(fourtytwo.additional["branches"], [])
-        self.assertEqual(leet.additional["branches"], [])
-        self.assertEqual(elite.additional["branches"], [])
-        self.assertEqual(badobject.additional["branches"], [])
+        self.assertIsNone(fourtytwo.right)
+        self.assertIsNone(leet.right)
+        self.assertIsNone(elite.right)
+        self.assertIsNone(badobject.right)
 
         # none of the top level branches shall have any further branches
-        self.assertEqual(leet.up.additional["branches"], [])
-        self.assertEqual(elite.up.additional["branches"], [])
-        self.assertEqual(badobject.up.additional["branches"], [])
+        self.assertIsNone(leet.up.right)
+        self.assertIsNone(elite.up.right)
+        self.assertIsNone(badobject.up.right)
 
         # top level branches reference the top level object
         self.assertEqual(leet.up.obj, obj)

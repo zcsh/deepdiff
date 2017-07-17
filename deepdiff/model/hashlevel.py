@@ -53,6 +53,23 @@ class HashLevel(BaseLevel):
         """
         super(HashLevel, self).__init__(objs, down, up, child_rels)
 
+        self.right = None
+        """
+        If there's a branch in our object tree right here, right represents the branch while
+        I represent the straight down path.
+        (Yes, it's completely arbitrary what we consider as "straight" and what as "branching".)
+        In case of a more-than-twofold branch, either my right will have another right
+        or I'm already someone's right as well.
+        """
+
+        self.left = None
+        """
+        If there's a branch in our object tree right here, left represents the straight down path
+        while I represent the branch.
+        (Yes, it's completely arbitrary what we consider as "straight" and what as "branching".)
+        In case of a more-than-twofold branch, I might have both a left and a right.
+        """
+
         # self.content will be set by base class constructor
 
         self.hasher = hasher
@@ -72,8 +89,6 @@ class HashLevel(BaseLevel):
         Cached result of hash() if ignoring child relationship parameters
         """
 
-        self.additional["branches"] = []
-
         self.status = True  # true means everythin' peachy
         """
         Shall be set to unprocessed (global object) if we cannot hash this levels obj
@@ -92,13 +107,17 @@ class HashLevel(BaseLevel):
             result += ", down: " + str(self.down.obj)
         else:
             have_down = False
-        if "branches" in self.additional and len(self.additional["branches"])>0:
+        if self.right is not None:
             if have_down:  # separator
                 result += "; "
 
             result += "branching to: "
             first = True
-            for branch in self.additional["branches"]:
+            branch = self
+            while True:
+                branch = branch.right
+                if branch is None:
+                    break
                 if not first:
                     result += ", "
                 first = False
@@ -130,7 +149,7 @@ class HashLevel(BaseLevel):
         """
         Wrapper around BaseLevel.branch_deeper():
         HashLevels store one subtree in the default .down attribute and the rest as
-        .additional["branches"]. This method decides which one it'll be.
+        .right or .right's right. This method decides which one it'll be.
         :return The parent level object (which may or may not be the
                 object you called this method on
         """
@@ -146,17 +165,22 @@ class HashLevel(BaseLevel):
             return self
         else:
             # This is an additional branch.
-            # Create a new chain and store it in .additional["branches"]
+            # Create a new chain and store it as right.
+            # Check first if I already have a right -- if so, the new branch will be their right.
             new_branch = self.copy_single_level(shall_have_up=False, shall_have_down=False)
+            trunk = self
+            while trunk.right is not None:
+                trunk = trunk.right
+            trunk.right = new_branch
+            new_branch.left = trunk
+            new_branch.right = None
             new_branch.child_rel = None  # TODO move this to copy_single_level()
             new_branch._hash = None  # dito
             new_branch._hash_wo_params = None  # dito
             new_branch.status = True  # dito
             new_branch.hasher = self.hasher  # TODO move somewhere else -- do we even need this?
-            new_branch.additional["branches"] = []  # new branch has no additional branches
             if "ignore_repetition" in self.additional:  # dito
                 new_branch.additional["ignore_repetition"] = self.additional["ignore_repetition"]
-            self.additional["branches"].append(new_branch)
             new_branch.create_deeper(
                 new_objs=[new_obj],
                 child_relationship_class=child_relationship_class,
@@ -172,8 +196,10 @@ class HashLevel(BaseLevel):
         """
         if self.down is not None:
             yield self
-        if self.additional["branches"]:
-            yield from self.additional["branches"]
+        branch = self
+        while branch.right is not None:
+            branch = branch.right
+            yield branch
 
     def hash(self, include_params=None):
         """
@@ -365,3 +391,12 @@ class HashLevel(BaseLevel):
 
         result = frame % content
         return result
+
+    def go_up(self):
+        if self.up is not None:
+            return self.up
+        else:
+            if self.left is not None:
+                return self.left.go_up()
+            else:
+                return None

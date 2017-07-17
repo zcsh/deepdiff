@@ -113,8 +113,8 @@ class BaseLevel(object):
         :rtype: BaseLevel
         """
         level = self
-        while level.up:
-            level = level.up
+        while level.go_up() is not None:
+            level = level.go_up()
         return level
 
     @property
@@ -125,8 +125,8 @@ class BaseLevel(object):
         :rtype: BaseLevel
         """
         level = self
-        while level.down:
-            level = level.down
+        while level.go_down() is not None:
+            level = level.go_down()
         return level
 
     def path(self, root="root", force=None):
@@ -182,7 +182,7 @@ class BaseLevel(object):
                 break
 
             # Prepare processing next level
-            level = level.down
+            level = level.go_down()
 
         self._path[force] = result
         result = None if result is None else "{}{}".format(root, result)
@@ -284,3 +284,13 @@ class BaseLevel(object):
         branch = self.copy(full_path=full_path)
         return branch.create_deeper(new_objs, child_relationship_class,
                                     child_relationship_param)
+
+    def go_up(self):
+        """
+        Wrapper around self.up allowing subclasses to fake an up if there's not an actual one.
+        HashLevel's do this to represent a whole object tree as a series of chains.
+        """
+        return self.up
+
+    def go_down(self):
+        return self.down
