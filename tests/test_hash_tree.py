@@ -140,6 +140,9 @@ class DeepHashTreeTestCase(unittest.TestCase):
         badobject = top.right.right.right.down
         self.assertIs(badobject.obj, bad)
 
+        # there are no more branches after badobject, because badobject is the last element of the list
+        self.assertIsNone(badobject.right)
+
         # depth is 2 --> all children are leaves
         self.assertIsNone(fourtytwo.down)
         self.assertIsNone(leet.down)
@@ -157,11 +160,6 @@ class DeepHashTreeTestCase(unittest.TestCase):
         self.assertIsNone(leet.right)
         self.assertIsNone(elite.right)
         self.assertIsNone(badobject.right)
-
-        # none of the top level branches shall have any further branches
-        self.assertIsNone(leet.up.right)
-        self.assertIsNone(elite.up.right)
-        self.assertIsNone(badobject.up.right)
 
         # top level branches reference the top level object
         self.assertEqual(leet.up.obj, obj)
