@@ -227,7 +227,7 @@ class HashLevel(BaseLevel):
         If this is not set, raise an error.
         :rtype: str
         """
-        # TODO possibe collisions? e.g. deep vs broad containers?
+        # TODO possible collisions? e.g. deep vs broad containers?
         #      this is probably not a secure hash yet
 
         if include_params is None:
