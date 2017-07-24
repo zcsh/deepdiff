@@ -79,6 +79,7 @@ class DeepSearch(dict):
                  exclude_regex_paths=set(),
                  exclude_types=set(),
                  verbose_level=1,
+                 case_sensitive=False,
                  **kwargs):
         if kwargs:
             raise ValueError((
@@ -87,7 +88,8 @@ class DeepSearch(dict):
             ) % ', '.join(kwargs.keys()))
 
         self.obj = obj
-        self.item = item
+        self.case_sensitive = case_sensitive if isinstance(item, strings) else True
+        item = item if self.case_sensitive else item.lower()
         self.exclude_paths = set(exclude_paths)
         self.exclude_regex_paths = [re.compile(exclude_regex_path) for exclude_regex_path in set(exclude_regex_paths)]
         self.exclude_types = set(exclude_types)
@@ -128,16 +130,28 @@ class DeepSearch(dict):
                      parents_ids=frozenset({}),
                      is_namedtuple=False):
         """Search objects"""
+        found = False
+        if obj == item:
+            found = True
+            # We report the match but also continue inside the match to see if there are
+            # furthur matches inside the `looped` object.
+            self.__report(report_key='matched_values', key=parent, value=obj)
+
         try:
             if is_namedtuple:
                 obj = obj._asdict()
             else:
-                obj = obj.__dict__
+                # Skip magic methods. Slightly hacky, but unless people are defining
+                # new magic methods they want to search, it should work fine.
+                obj = {i: getattr(obj, i) for i in dir(obj)
+                    if not (i.startswith('__') and i.endswith('__'))}
         except AttributeError:
             try:
                 obj = {i: getattr(obj, i) for i in obj.__slots__}
             except AttributeError:
-                self['unprocessed'].append("%s" % parent)
+                if not found:
+                    self['unprocessed'].append("%s" % parent)
+
                 return
 
         self.__search_dict(
@@ -186,8 +200,9 @@ class DeepSearch(dict):
             parents_ids_added = self.__add_to_frozen_set(parents_ids, item_id)
 
             new_parent = parent_text % (parent, item_key_str)
+            new_parent_cased = new_parent if self.case_sensitive else new_parent.lower()
 
-            if str(item) in new_parent:
+            if str(item) in new_parent_cased:
                 self.__report(
                     report_key='matched_paths',
                     key=new_parent,
@@ -206,25 +221,31 @@ class DeepSearch(dict):
                           parents_ids=frozenset({})):
         """Search iterables except dictionaries, sets and strings."""
 
-        for i, x in enumerate(obj):
+        for i, thing in enumerate(obj):
             new_parent = "%s[%s]" % (parent, i)
-            if self.__skip_this(x, parent=new_parent):
+            if self.__skip_this(thing, parent=new_parent):
                 continue
-            if x == item:
-                self.__report(
-                    report_key='matched_values', key=new_parent, value=x)
+
+            if self.case_sensitive or not isinstance(thing, strings):
+                thing_cased = thing
             else:
-                item_id = id(x)
+                thing_cased = thing.lower()
+
+            if thing_cased == item:
+                self.__report(
+                    report_key='matched_values', key=new_parent, value=thing)
+            else:
+                item_id = id(thing)
                 if parents_ids and item_id in parents_ids:
                     continue
-                parents_ids_added = self.__add_to_frozen_set(parents_ids,
-                                                             item_id)
-                self.__search(x, item, "%s[%s]" %
+                parents_ids_added = self.__add_to_frozen_set(parents_ids, item_id)
+                self.__search(thing, item, "%s[%s]" %
                               (parent, i), parents_ids_added)
 
     def __search_str(self, obj, item, parent):
         """Compare strings"""
-        if item in obj:
+        obj_text = obj if self.case_sensitive else obj.lower()
+        if item in obj_text:
             self.__report(report_key='matched_values', key=parent, value=obj)
 
     def __search_numbers(self, obj, item, parent):
@@ -279,6 +300,46 @@ class DeepSearch(dict):
 
         else:
             self.__search_obj(obj, item, parent, parents_ids)
+
+
+class grep(object):
+    """
+    **Grep!**
+
+    grep is a new interface for Deep Search. It takes exactly the same arguments.
+    And it works just like grep in shell!
+
+    **Examples**
+
+    Importing
+        >>> from deepdiff import grep
+        >>> from pprint import pprint
+
+    Search in list for string
+        >>> obj = ["long somewhere", "string", 0, "somewhere great!"]
+        >>> item = "somewhere"
+        >>> ds = obj | grep(item)
+        >>> print(ds)
+        {'matched_values': {'root[3]', 'root[0]'}
+
+    Search in nested data for string
+        >>> obj = ["something somewhere", {"long": "somewhere", "string": 2, 0: 0, "somewhere": "around"}]
+        >>> item = "somewhere"
+        >>> ds = obj | grep(item, verbose_level=2)
+        >>> pprint(ds, indent=2)
+        { 'matched_paths': {"root[1]['somewhere']": 'around'},
+          'matched_values': { 'root[0]': 'something somewhere',
+                              "root[1]['long']": 'somewhere'}}
+    """
+
+    def __init__(self,
+                 item,
+                 **kwargs):
+        self.item = item
+        self.kwargs = kwargs
+
+    def __ror__(self, other):
+        return DeepSearch(obj=other, item=self.item, **self.kwargs)
 
 
 if __name__ == "__main__":  # pragma: no cover

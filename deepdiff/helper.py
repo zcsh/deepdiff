@@ -20,11 +20,15 @@ pypy3 = py3 and hasattr(sys, "pypy_translation_info")
 if py3:  # pragma: no cover
     from builtins import int
     strings = (str, bytes)  # which are both basestring
+    unicode_type = str
+    bytes_type = bytes
     numbers = (int, float, complex, datetime.datetime, datetime.date, Decimal)
     items = 'items'
 else:  # pragma: no cover
     int = int
     strings = (str, unicode)
+    unicode_type = unicode
+    bytes_type = str
     numbers = (int, float, long, complex, datetime.datetime, datetime.date,
                Decimal)
 
@@ -43,26 +47,6 @@ EXPANDED_KEY_MAP = {  # pragma: no cover
     'oldrepeat': 'old_repeat',
     'oldtype': 'old_type',
     'oldvalue': 'old_value'}
-
-
-class RemapDict(dict):
-    """
-    Remap Dictionary.
-
-    For keys that have a new, longer name, remap the old key to the new key.
-    Other keys that don't have a new name are handled as before.
-    """
-
-    def __getitem__(self, old_key):
-        new_key = EXPANDED_KEY_MAP.get(old_key, old_key)
-        if new_key != old_key:
-            warn(
-                "DeepDiff Deprecation: %s is renamed to %s. Please start using "
-                "the new unified naming convention.", old_key, new_key)
-        if new_key in self:
-            return self.get(new_key)
-        else:  # pragma: no cover
-            raise KeyError(new_key)
 
 
 def short_repr(item, max_length=15):
@@ -104,6 +88,26 @@ def warn(*args, **kwargs):
     if WARNING_NUM < 10:
         WARNING_NUM += 1
         logger.warning(*args, **kwargs)
+
+
+class RemapDict(dict):
+    """
+    Remap Dictionary.
+
+    For keys that have a new, longer name, remap the old key to the new key.
+    Other keys that don't have a new name are handled as before.
+    """
+
+    def __getitem__(self, old_key):
+        new_key = EXPANDED_KEY_MAP.get(old_key, old_key)
+        if new_key != old_key:
+            warn(
+                "DeepDiff Deprecation: %s is renamed to %s. Please start using "
+                "the new unified naming convention.", old_key, new_key)
+        if new_key in self:
+            return self.get(new_key)
+        else:  # pragma: no cover
+            raise KeyError(new_key)
 
 
 class Verbose(object):

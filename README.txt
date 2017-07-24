@@ -1,4 +1,4 @@
-**DeepDiff v 3.1.1**
+**DeepDiff v 3.3.0**
 
 Deep Difference of dictionaries, iterables, strings and other objects. It will recursively look for all the changes.
 
@@ -245,6 +245,12 @@ http://zepworks.com/blog/diff-it-to-digg-it/
 
 **Changelog**
 
+- v3-3-0: Searching for objects and class attributes
+- v3-2-2: Adding help(deepdiff)
+- v3-2-1: Fixing hash of None
+- v3-2-0: Adding grep for search: object | grep(item)
+- v3-1-3: Unicode vs. Bytes default fix
+- v3-1-2: NotPresent Fix when item is added or removed.
 - v3-1-1: Bug fix when item value is None (#58)
 - v3-1-0: Serialization to/from json
 - v3-0-0: Introducing Tree View
@@ -284,10 +290,15 @@ Victor Hahn Castell
 
 Also thanks to:
 
-- nfvs for Travis-CI setup script
-- brbsix for initial Py3 porting
-- WangFenjin for unicode support
-- timoilya for comparing list of sets when ignoring order
-- Bernhard10 for significant digits comparison
+- nfvs for Travis-CI setup script.
+- brbsix for initial Py3 porting.
+- WangFenjin for unicode support.
+- timoilya for comparing list of sets when ignoring order.
+- Bernhard10 for significant digits comparison.
 - b-jazz for PEP257 cleanup, Standardize on full names, fixing line endings.
 - finnhughes for fixing __slots__
+- moloney for Unicode vs. Bytes default
+- serv-inc for adding help(deepdiff)
+- movermeyer for updating docs
+- maxrothman for search in inherited class attributes
+- maxrothman for search for types/objects

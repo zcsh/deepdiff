@@ -20,9 +20,9 @@ from decimal import Decimal
 from collections import Mapping
 from collections import Iterable
 
-from .helper import py3, strings, numbers, ListItemRemovedOrAdded, IndexedHash, Verbose
+from .helper import py3, strings, numbers, bytes_type, ListItemRemovedOrAdded, IndexedHash, Verbose
 from .base import DeepBase
-from .model import NotPresentHere, RemapDict, ResultDict
+from .model import notpresent, RemapDict, ResultDict
 from .model.diffresult import DiffTextResult, DiffTreeResult
 from .model.difflevel import DiffLevel
 from .model.childrelationship import DictRelationship, AttributeRelationship, SetRelationship
@@ -413,13 +413,13 @@ class DeepDiff(DeepBase, ResultDict):
         >>> t2 = {1:1, 2:2, 3:3, 4:{"a":"hello", "b":[1, 2]}}
         >>> ddiff = DeepDiff(t1, t2, view='tree')
         >>> ddiff
-        {'iterable_item_removed': {<root[4]['b'][3] t1:4, t2:None>, <root[4]['b'][2] t1:3, t2:None>}}
+        {'iterable_item_removed': {<root[4]['b'][3] t1:4, t2:Not Present>, <root[4]['b'][2] t1:3, t2:Not Present>}}
         >>> # Note that the iterable_item_removed is a set. In this case it has 2 items in it.
         >>> # One way to get one item from the set is to convert it to a list
         >>> # And then get the first item of the list:
         >>> removed = list(ddiff['iterable_item_removed'])[0]
         >>> removed
-        <root[4]['b'][2] t1:3, t2:None>
+        <root[4]['b'][2] t1:3, t2:Not Present>
         >>>
         >>> parent = removed.up
         >>> parent
@@ -444,7 +444,7 @@ class DeepDiff(DeepBase, ResultDict):
         >>> t2 = {1:1, 2:2, 3:3, 4:{"a":"hello", "b":[1, 3, 2, 3]}}
         >>> ddiff = DeepDiff(t1, t2, view='tree')
         >>> pprint(ddiff, indent = 2)
-        { 'iterable_item_added': {<root[4]['b'][3] t1:None, t2:3>},
+        { 'iterable_item_added': {<root[4]['b'][3] t1:Not Present, t2:3>},
           'values_changed': { <root[4]['b'][1] t1:2, t2:3>,
                               <root[4]['b'][2] t1:3, t2:2>}}
         >>>
@@ -453,7 +453,7 @@ class DeepDiff(DeepBase, ResultDict):
         >>>
         >>> (added,) = ddiff['iterable_item_added']
         >>> added
-        <root[4]['b'][3] t1:None, t2:3>
+        <root[4]['b'][3] t1:Not Present, t2:3>
         >>> added.up.up
         <root[4] t1:{'a': 'hello...}, t2:{'a': 'hello...}>
         >>> added.up.up.path()
@@ -470,7 +470,7 @@ class DeepDiff(DeepBase, ResultDict):
         >>> t2 = [4, 4, 1]
         >>> ddiff = DeepDiff(t1, t2, ignore_order=True, report_repetition=True, view='tree')
         >>> pprint(ddiff, indent=2)
-        { 'iterable_item_removed': {<root[1] t1:3, t2:None>},
+        { 'iterable_item_removed': {<root[1] t1:3, t2:Not Present>},
           'repetition_change': { <root[3] {'repetition': {'old_repeat': 1,...}>,
                                  <root[0] {'repetition': {'old_repeat': 2,...}>}}
         >>>
@@ -510,7 +510,7 @@ class DeepDiff(DeepBase, ResultDict):
         >>> t2 = {1:1, 2:2, 3:3, 4:{"a":"hello", "b":[1, 2, {1:3}]}}
         >>> ddiff = DeepDiff(t1, t2, view='tree')
         >>> pprint (ddiff, indent = 2)
-        { 'dictionary_item_removed': {<root[4]['b'][2][2] t1:2, t2:None>},
+        { 'dictionary_item_removed': {<root[4]['b'][2][2] t1:2, t2:Not Present>},
           'values_changed': {<root[4]['b'][2][1] t1:1, t2:3>}}
 
     Sets (Tree View):
@@ -518,7 +518,7 @@ class DeepDiff(DeepBase, ResultDict):
         >>> t2 = {1, 2, 3, 5}
         >>> ddiff = DeepDiff(t1, t2, view='tree')
         >>> print(ddiff)
-        {'set_item_removed': {<root: t1:8, t2:None>}, 'set_item_added': {<root: t1:None, t2:5>, <root: t1:None, t2:3>}}
+        {'set_item_removed': {<root: t1:8, t2:Not Present>}, 'set_item_added': {<root: t1:Not Present, t2:5>, <root: t1:Not Present, t2:3>}}
         >>> # grabbing one item from set_item_removed set which has one item only
         >>> (item,) = ddiff['set_item_removed']
         >>> item.up
@@ -549,7 +549,7 @@ class DeepDiff(DeepBase, ResultDict):
     Object attribute added (Tree View):
         >>> t2.c = "new attribute"
         >>> pprint(DeepDiff(t1, t2, view='tree'))
-        {'attribute_added': {<root.c t1:None, t2:'new attribute'>},
+        {'attribute_added': {<root.c t1:Not Present, t2:'new attribute'>},
          'values_changed': {<root.b t1:1, t2:2>}}
 
     Approximate decimals comparison (Significant digits after the point) (Tree View):
@@ -631,7 +631,7 @@ class DeepDiff(DeepBase, ResultDict):
                 "The following parameter(s) are not valid: %s\n"
                 "The valid parameters are ignore_order, report_repetition, significant_digits,"
                 "exclude_paths, exclude_types, verbose_level and view.") % ', '.join(kwargs.keys()))
-        
+
         DeepBase.__init__(self,
                           significant_digits=significant_digits,
                           exclude_paths=exclude_paths,
@@ -639,7 +639,7 @@ class DeepDiff(DeepBase, ResultDict):
                           verbose_level=verbose_level,
                           view=view,
                           rootstr=rootstr)
-        
+
         self.ignore_order = ignore_order
         self.report_repetition = report_repetition
         self.hashes = {}
@@ -759,14 +759,14 @@ class DeepDiff(DeepBase, ResultDict):
 
         for key in t_keys_added:
             change_level = level.branch_deeper(
-                [NotPresentHere, t2[key]],
+                [notpresent, t2[key]],
                 child_relationship_class=rel_class,
                 child_relationship_param=key)
             self._report_result(change_level, item_added_key)
 
         for key in t_keys_removed:
             change_level = level.branch_deeper(
-                [t1[key], NotPresentHere],
+                [t1[key], notpresent],
                 child_relationship_class=rel_class,
                 child_relationship_param=key)
             self._report_result(change_level, item_removed_key)
@@ -800,13 +800,13 @@ class DeepDiff(DeepBase, ResultDict):
 
         for item in items_added:
             change_level = level.branch_deeper(
-                [None, item],
+                [notpresent, item],
                 child_relationship_class=SetRelationship)
             self._report_result(change_level, 'set_item_added')
 
         for item in items_removed:
             change_level = level.branch_deeper(
-                [item, None],
+                [item, notpresent],
                 child_relationship_class=SetRelationship)
             self._report_result(change_level, 'set_item_removed')
 
@@ -835,14 +835,14 @@ class DeepDiff(DeepBase, ResultDict):
                     level.t1, level.t2, fillvalue=ListItemRemovedOrAdded)):
             if y is ListItemRemovedOrAdded:  # item removed completely
                 change_level = level.branch_deeper(
-                    [x, NotPresentHere],
+                    [x, notpresent],
                     child_relationship_class=child_relationship_class,
                     child_relationship_param=i)
                 self._report_result(change_level, 'iterable_item_removed')
 
             elif x is ListItemRemovedOrAdded:  # new item added
                 change_level = level.branch_deeper(
-                    [NotPresentHere, y],
+                    [notpresent, y],
                     child_relationship_class=child_relationship_class,
                     child_relationship_param=i)
                 self._report_result(change_level, 'iterable_item_added')
@@ -867,12 +867,23 @@ class DeepDiff(DeepBase, ResultDict):
             return
 
         # do we add a diff for convenience?
-        if '\n' in level.t1 or '\n' in level.t2:
-            diff = difflib.unified_diff(
-                level.t1.splitlines(), level.t2.splitlines(), lineterm='')
-            diff = list(diff)
-            if diff:
-                level.additional['diff'] = '\n'.join(diff)
+        do_diff = True
+        if isinstance(level.t1, bytes_type):
+            try:
+                t1_str = level.t1.decode('ascii')
+                t2_str = level.t2.decode('ascii')
+            except UnicodeDecodeError:
+                do_diff = False
+        else:
+            t1_str = level.t1
+            t2_str = level.t2
+        if do_diff:
+            if u'\n' in t1_str or u'\n' in t2_str:
+                diff = difflib.unified_diff(
+                    t1_str.splitlines(), t2_str.splitlines(), lineterm='')
+                diff = list(diff)
+                if diff:
+                    level.additional['diff'] = u'\n'.join(diff)
 
         self._report_result(level, 'values_changed')
 
@@ -935,7 +946,7 @@ class DeepDiff(DeepBase, ResultDict):
             for hash_value in hashes_added:
                 for i in t2_hashtable[hash_value].indexes:
                     change_level = level.branch_deeper(
-                        [NotPresentHere, t2_hashtable[hash_value].item],
+                        [notpresent, t2_hashtable[hash_value].item],
                         child_relationship_class=SubscriptableIterableRelationship,  # TODO: that might be a lie!
                         child_relationship_param=i
                     )  # TODO: what is this value exactly?
@@ -944,7 +955,7 @@ class DeepDiff(DeepBase, ResultDict):
             for hash_value in hashes_removed:
                 for i in t1_hashtable[hash_value].indexes:
                     change_level = level.branch_deeper(
-                        [t1_hashtable[hash_value].item, NotPresentHere],
+                        [t1_hashtable[hash_value].item, notpresent],
                         child_relationship_class=SubscriptableIterableRelationship,  # TODO: that might be a lie!
                         child_relationship_param=i)
                     self._report_result(change_level, 'iterable_item_removed')
@@ -974,7 +985,7 @@ class DeepDiff(DeepBase, ResultDict):
         else:
             for hash_value in hashes_added:
                 change_level = level.branch_deeper(
-                    [NotPresentHere, t2_hashtable[hash_value].item],
+                    [notpresent, t2_hashtable[hash_value].item],
                     child_relationship_class=SubscriptableIterableRelationship,  # TODO: that might be a lie!
                     child_relationship_param=t2_hashtable[hash_value].indexes[
                         0])  # TODO: what is this value exactly?
@@ -982,7 +993,7 @@ class DeepDiff(DeepBase, ResultDict):
 
             for hash_value in hashes_removed:
                 change_level = level.branch_deeper(
-                    [t1_hashtable[hash_value].item, NotPresentHere],
+                    [t1_hashtable[hash_value].item, notpresent],
                     child_relationship_class=SubscriptableIterableRelationship,  # TODO: that might be a lie!
                     child_relationship_param=t1_hashtable[hash_value].indexes[
                         0])

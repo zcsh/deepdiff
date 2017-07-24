@@ -4,7 +4,7 @@ from copy import copy
 from itertools import zip_longest
 
 from . import UP_DOWN
-from . import LevelContent, NotPresentHere
+from . import LevelContent, notpresent
 from .childrelationship import ChildRelationship
 
 
@@ -249,7 +249,7 @@ class BaseLevel(object):
         """
         sides = zip_longest(self.level_contents(), self.down.level_contents())
         for (self_level_content, down_level_content) in sides:
-            if down_level_content.obj is not NotPresentHere:
+            if down_level_content.obj is not notpresent:
                 self_level_content.child_rel = ChildRelationship.create(
                     klass=klass,
                     parent=self_level_content.obj,

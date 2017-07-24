@@ -22,16 +22,18 @@ or using nosetests:
 import unittest
 import datetime
 import re
+import logging
+
 from decimal import Decimal
 from deepdiff import DeepDiff
 from deepdiff.helper import py3
 from tests import CustomClass, Bad
+
 if py3:
     from unittest import mock
 else:
     import mock
 
-import logging
 logging.disable(logging.CRITICAL)
 
 
@@ -174,6 +176,67 @@ class DeepDiffTextTestCase(unittest.TestCase):
                     '--- \n+++ \n@@ -1,5 +1,4 @@\n-world!\n-Goodbye!\n+world\n 1\n 2\n End',
                     'new_value': 'world\n1\n2\nEnd',
                     'old_value': 'world!\nGoodbye!\n1\n2\nEnd'
+                }
+            }
+        }
+        self.assertEqual(ddiff, result)
+
+    def test_bytes(self):
+        t1 = {
+            1: 1,
+            2: 2,
+            3: 3,
+            4: {
+                "a": b"hello",
+                "b": b"world!\nGoodbye!\n1\n2\nEnd",
+                "c": b"\x80",
+            }
+        }
+        t2 = {1: 1,
+              2: 2,
+              3: 3,
+              4: {
+                  "a": b"hello",
+                  "b": b"world\n1\n2\nEnd",
+                  "c": b'\x81',
+              }
+        }
+        ddiff = DeepDiff(t1, t2)
+        result = {
+            'values_changed': {
+                "root[4]['b']": {
+                    'diff':
+                    '--- \n+++ \n@@ -1,5 +1,4 @@\n-world!\n-Goodbye!\n+world\n 1\n 2\n End',
+                    'new_value': b'world\n1\n2\nEnd',
+                    'old_value': b'world!\nGoodbye!\n1\n2\nEnd'
+                },
+                "root[4]['c']": {
+                    'new_value': b'\x81',
+                    'old_value': b'\x80'
+                }
+            }
+        }
+        self.assertEqual(ddiff, result)
+
+    def test_unicode(self):
+        t1 = {
+            1: 1,
+            2: 2,
+            3: 3,
+            4: {
+                "a": u"hello",
+                "b": u"world!\nGoodbye!\n1\n2\nEnd"
+            }
+        }
+        t2 = {1: 1, 2: 2, 3: 3, 4: {"a": u"hello", "b": u"world\n1\n2\nEnd"}}
+        ddiff = DeepDiff(t1, t2)
+        result = {
+            'values_changed': {
+                "root[4]['b']": {
+                    'diff':
+                    '--- \n+++ \n@@ -1,5 +1,4 @@\n-world!\n-Goodbye!\n+world\n 1\n 2\n End',
+                    'new_value': u'world\n1\n2\nEnd',
+                    'old_value': u'world!\nGoodbye!\n1\n2\nEnd'
                 }
             }
         }
@@ -487,6 +550,13 @@ class DeepDiffTextTestCase(unittest.TestCase):
         ddiff = DeepDiff(t1, t2, ignore_order=True)
         result = {'iterable_item_added': {'root[0]': {4}}}
         self.assertEqual(ddiff, result)
+
+    def test_set_of_none(self):
+        """
+        https://github.com/seperman/deepdiff/issues/64
+        """
+        ddiff = DeepDiff(set(), set([None]))
+        self.assertEqual(ddiff, {'set_item_added': {'root[None]'}})
 
     def test_list_that_contains_dictionary(self):
         t1 = {1: 1, 2: 2, 3: 3, 4: {"a": "hello", "b": [1, 2, {1: 1, 2: 2}]}}

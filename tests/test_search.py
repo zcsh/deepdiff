@@ -11,10 +11,11 @@ Or using Nose:
     nosetests --with-coverage --cover-package=deepdiff
 
 To run a specific test, run this from the root of repo:
-    nosetests .\tests\search_tests.py:DeepSearchTestCase.test_string_in_root
+    nosetests tests/test_search.py:DeepSearchTestCase.test_case_insensitive_of_str_in_list
 """
 import unittest
-from deepdiff import DeepSearch
+from deepdiff import DeepSearch, grep
+from datetime import datetime
 import logging
 logging.disable(logging.CRITICAL)
 
@@ -96,6 +97,23 @@ class DeepSearchTestCase(unittest.TestCase):
             'matched_values': {"root['long']"}
         }
         ds = DeepSearch(obj, item, verbose_level=1)
+        self.assertEqual(ds, result)
+
+    def test_string_in_dictionary_case_insensitive(self):
+        obj = {"long": "Somewhere over there!", "string": 2, 0: 0, "SOMEWHERE": "around"}
+        result = {
+            'matched_paths': {"root['SOMEWHERE']"},
+            'matched_values': {"root['long']"}
+        }
+        ds = DeepSearch(obj, item, verbose_level=1, case_sensitive=False)
+        self.assertEqual(ds, result)
+
+    def test_string_in_dictionary_key_case_insensitive_partial(self):
+        obj = {"SOMEWHERE here": "around"}
+        result = {
+            'matched_paths': {"root['SOMEWHERE here']"}
+        }
+        ds = DeepSearch(obj, item, verbose_level=1, case_sensitive=False)
         self.assertEqual(ds, result)
 
     def test_string_in_dictionary_verbose(self):
@@ -217,12 +235,6 @@ class DeepSearchTestCase(unittest.TestCase):
         result = {}
         self.assertEqual(ds, result)
 
-    def test_skip_regexp(self):
-        obj = [{'a': 1, 'b': "somewhere"}, {'c': 4, 'b': "somewhere"}]
-        ds = DeepSearch(obj, item, exclude_regex_paths=["root\[\d+\]"])
-        result = {}
-        self.assertEqual(ds, result)
-
     def test_skip_type_str(self):
         obj = "long string somewhere"
         result = {}
@@ -250,3 +262,76 @@ class DeepSearchTestCase(unittest.TestCase):
         self.assertEqual(ds, result)
         ds = DeepSearch(obj, item, verbose_level=2)
         self.assertEqual(ds, result)
+
+    def test_case_insensitive_of_str_in_list(self):
+        obj = ["a", "bb", "BBC", "aBbB"]
+        item = "BB"
+        result = {"matched_values": {'root[1]', 'root[2]', 'root[3]'}}
+        self.assertEqual(DeepSearch(obj, item, verbose_level=1, case_sensitive=False), result)
+
+    def test_case_sensitive_of_str_in_list(self):
+        obj = ["a", "bb", "BBC", "aBbB"]
+        item = "BB"
+        result = {"matched_values": {'root[2]'}}
+        self.assertEqual(DeepSearch(obj, item, verbose_level=1, case_sensitive=True), result)
+
+    def test_case_sensitive_of_str_in_one_liner(self):
+        obj = "Hello, what's up?"
+        item = "WHAT"
+        result = {}
+        self.assertEqual(DeepSearch(obj, item, verbose_level=1, case_sensitive=True), result)
+
+    def test_case_insensitive_of_str_in_one_liner(self):
+        obj = "Hello, what's up?"
+        item = "WHAT"
+        result = {'matched_values': {'root'}}
+        self.assertEqual(DeepSearch(obj, item, verbose_level=1, case_sensitive=False), result)
+
+    def test_none(self):
+        obj = item = None
+        result = {'matched_values': {'root'}}
+        self.assertEqual(DeepSearch(obj, item, verbose_level=1), result)
+
+    def test_complex_obj(self):
+        obj = datetime(2017, 5, 4, 1, 1, 1)
+        item = datetime(2017, 5, 4, 1, 1, 1)
+        result = {'matched_values': {'root'}}
+        self.assertEqual(DeepSearch(obj, item, verbose_level=1), result)
+
+    def test_keep_searching_after_obj_match(self):
+
+        class AlwaysEqual:
+
+            def __init__(self, recurse=True):
+                if recurse:
+                    self.some_attr = AlwaysEqual(recurse=False)
+
+            def __eq__(self, other):
+                return True
+
+        obj = AlwaysEqual()
+        item = AlwaysEqual()
+        result = {'matched_values': {'root', 'root.some_attr'}}
+
+    def test_search_inherited_attributes(self):
+        class Parent(object):
+            a = 1
+
+        class Child(Parent):
+            b = 2
+
+        obj = Child()
+        item = 1
+        result = {'matched_values': {'root.a'}}
+        self.assertEqual(DeepSearch(obj, item, verbose_level=1), result)
+
+
+class GrepTestCase(unittest.TestCase):
+
+    def test_grep_dict(self):
+        obj = {
+            "for life": "vegan",
+            "ingredients": ["no meat", "no eggs", "no dairy", "somewhere"]
+        }
+        ds = obj | grep(item)
+        self.assertEqual(ds, {'matched_values': {"root['ingredients'][3]"}})

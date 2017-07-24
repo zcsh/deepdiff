@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from . import DIFF_REPORT_KEYS, FORCE_DEFAULT
-from . import ResultDict, NotPresentHere
+from . import ResultDict, notpresent
 from ..helper import RemapDict, Verbose, strings
 
 
@@ -61,7 +61,7 @@ class DiffTextResult(ResultDict):
                 # determine change direction (added or removed)
                 # Report t2 (the new one) whenever possible.
                 # In cases where t2 doesn't exist (i.e. stuff removed), report t1.
-                if change.t2 is not NotPresentHere:
+                if change.t2 is not notpresent:
                     item = change.t2
                 else:
                     item = change.t1

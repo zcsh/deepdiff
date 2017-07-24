@@ -1,5 +1,6 @@
-# deepdiff v 3.1.1
+# deepdiff v 3.3.0
 
+[![Join the chat at https://gitter.im/deepdiff/Lobby](https://badges.gitter.im/deepdiff/Lobby.svg)](https://gitter.im/deepdiff/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 <!-- ![Downloads](https://img.shields.io/pypi/dm/deepdiff.svg?style=flat) -->
 ![Python Versions](https://img.shields.io/pypi/pyversions/deepdiff.svg?style=flat)
 ![Doc](https://readthedocs.org/projects/deepdiff/badge/?version=latest)
@@ -163,6 +164,8 @@ Verbose level by default is 1. The possible values are 0, 1 and 2.
 ## Deep Search
 (New in v2-1-0)
 
+Tip: Take a look at [grep](#grep) which gives you a new interface for DeepSearch!
+
 DeepDiff comes with a utility to find the path to the item you are looking for.
 It is called DeepSearch and it has a similar interface to DeepDiff.
 
@@ -171,7 +174,7 @@ Let's say you have a huge nested object and want to see if any item with the wor
 ```py
 from deepdiff import DeepSearch
 obj = {"long": "somewhere", "string": 2, 0: 0, "somewhere": "around"}
-ds = DeepSearch(obj, item, verbose_level=2)
+ds = DeepSearch(obj, "somewhere", verbose_level=2)
 print(ds)
 ```
 
@@ -183,6 +186,33 @@ Which will print:
 ```
 
 Tip: An interesting use case is to search inside `locals()` when doing pdb.
+
+## Grep
+(New in v3-2-0)
+
+Grep is another interface for DeepSearch.
+Just grep through your objects as you would in shell!
+
+```py
+from deepdiff import grep
+obj = {"long": "somewhere", "string": 2, 0: 0, "somewhere": "around"}
+ds = obj | grep("somewhere")
+print(ds)
+```
+
+Which will print:
+
+```py
+{'matched_paths': {"root['somewhere']"},
+ 'matched_values': {"root['long']"}}
+```
+
+And you can pass all the same kwargs as DeepSearch to grep too:
+
+```py
+>>> obj | grep(item, verbose_level=2)
+{'matched_paths': {"root['somewhere']": 'around'}, 'matched_values': {"root['long']": 'somewhere'}}
+```
 
 ## Using DeepDiff in unit tests
 
@@ -524,13 +554,13 @@ It gives you the actual objects (t1, t2) throughout the tree of parents and chil
 >>> t2 = {1:1, 2:2, 3:3, 4:{"a":"hello", "b":[1, 2]}}
 >>> ddiff = DeepDiff(t1, t2, view='tree')
 >>> ddiff
-{'iterable_item_removed': {<root[4]['b'][3] t1:4, t2:None>, <root[4]['b'][2] t1:3, t2:None>}}
+{'iterable_item_removed': {<root[4]['b'][3] t1:4, t2:Not Present>, <root[4]['b'][2] t1:3, t2:Not Present>}}
 >>> # Note that the iterable_item_removed is a set. In this case it has 2 items in it.
 >>> # One way to get one item from the set is to convert it to a list
 >>> # And then get the first item of the list:
 >>> removed = list(ddiff['iterable_item_removed'])[0]
 >>> removed
-<root[4]['b'][2] t1:3, t2:None>
+<root[4]['b'][2] t1:3, t2:Not Present>
 >>>
 >>> parent = removed.up
 >>> parent
@@ -558,7 +588,7 @@ True
 >>> t2 = {1:1, 2:2, 3:3, 4:{"a":"hello", "b":[1, 3, 2, 3]}}
 >>> ddiff = DeepDiff(t1, t2, view='tree')
 >>> pprint(ddiff, indent = 2)
-{ 'iterable_item_added': {<root[4]['b'][3] t1:None, t2:3>},
+{ 'iterable_item_added': {<root[4]['b'][3] t1:Not Present, t2:3>},
   'values_changed': { <root[4]['b'][1] t1:2, t2:3>,
                       <root[4]['b'][2] t1:3, t2:2>}}
 >>>
@@ -567,7 +597,7 @@ True
 >>>
 >>> (added,) = ddiff['iterable_item_added']
 >>> added
-<root[4]['b'][3] t1:None, t2:3>
+<root[4]['b'][3] t1:Not Present, t2:3>
 >>> added.up.up
 <root[4] t1:{'a': 'hello...}, t2:{'a': 'hello...}>
 >>> added.up.up.path()
@@ -587,7 +617,7 @@ True
 >>> t2 = [4, 4, 1]
 >>> ddiff = DeepDiff(t1, t2, ignore_order=True, report_repetition=True, view='tree')
 >>> pprint(ddiff, indent=2)
-{ 'iterable_item_removed': {<root[1] t1:3, t2:None>},
+{ 'iterable_item_removed': {<root[1] t1:3, t2:Not Present>},
   'repetition_change': { <root[3] {'repetition': {'old_repeat': 1,...}>,
                          <root[0] {'repetition': {'old_repeat': 2,...}>}}
 >>>
@@ -630,7 +660,7 @@ True
 >>> t2 = {1:1, 2:2, 3:3, 4:{"a":"hello", "b":[1, 2, {1:3}]}}
 >>> ddiff = DeepDiff(t1, t2, view='tree')
 >>> pprint (ddiff, indent = 2)
-{ 'dictionary_item_removed': {<root[4]['b'][2][2] t1:2, t2:None>},
+{ 'dictionary_item_removed': {<root[4]['b'][2][2] t1:2, t2:Not Present>},
   'values_changed': {<root[4]['b'][2][1] t1:1, t2:3>}}
 
 Sets (Tree View):
@@ -638,7 +668,7 @@ Sets (Tree View):
 >>> t2 = {1, 2, 3, 5}
 >>> ddiff = DeepDiff(t1, t2, view='tree')
 >>> print(ddiff)
-{'set_item_removed': {<root: t1:8, t2:None>}, 'set_item_added': {<root: t1:None, t2:5>, <root: t1:None, t2:3>}}
+{'set_item_removed': {<root: t1:8, t2:Not Present>}, 'set_item_added': {<root: t1:Not Present, t2:5>, <root: t1:Not Present, t2:3>}}
 >>> # grabbing one item from set_item_removed set which has one item only
 >>> (item,) = ddiff['set_item_removed']
 >>> item.up
@@ -678,7 +708,7 @@ True
 ```python
 >>> t2.c = "new attribute"
 >>> pprint(DeepDiff(t1, t2, view='tree'))
-{'attribute_added': {<root.c t1:None, t2:'new attribute'>},
+{'attribute_added': {<root.c t1:Not Present, t2:'new attribute'>},
  'values_changed': {<root.b t1:1, t2:2>}}
 ```
 
@@ -748,12 +778,18 @@ I was honored to give a talk about how DeepDiff does what it does at Pycon 2016.
 And here is more info: <http://zepworks.com/blog/diff-it-to-digg-it/>
 
 
-##Documentation
+## Documentation
 
 <http://deepdiff.readthedocs.io/en/latest/>
 
-##Changelog
+## Change log
 
+- v3-3-0: Searching for objects and class attributes
+- v3-2-2: Adding help(deepdiff)
+- v3-2-1: Fixing hash of None
+- v3-2-0: Adding grep for search: object | grep(item)
+- v3-1-3: Unicode vs. Bytes default fix
+- v3-1-2: NotPresent Fix when item is added or removed.
 - v3-1-1: Bug fix when item value is None (#58)
 - v3-1-0: Serialization to/from json
 - v3-0-0: Introducing Tree View
@@ -799,3 +835,9 @@ Also thanks to:
 - timoilya for comparing list of sets when ignoring order.
 - Bernhard10 for significant digits comparison.
 - b-jazz for PEP257 cleanup, Standardize on full names, fixing line endings.
+- finnhughes for fixing __slots__
+- moloney for Unicode vs. Bytes default
+- serv-inc for adding help(deepdiff)
+- movermeyer for updating docs
+- maxrothman for search in inherited class attributes
+- maxrothman for search for types/objects
