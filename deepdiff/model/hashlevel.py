@@ -311,6 +311,12 @@ class HashLevel(BaseLevel):
         single hash value that self.hash() generates due to backwards compatibility.
         :rtype: str
         """
+        def conditional_encode(strobj):
+            if self.hasher is hash:
+                return strobj
+            else:
+                return strobj.encode('utf-8')
+
         if self.status is repetition:
             return ""
         if self.status is not True:
@@ -340,14 +346,18 @@ class HashLevel(BaseLevel):
 
                 if py3:
                     if isinstance(self.obj, str):
-                        hashable = "{}:{}".format(type(self.obj).__name__, self.obj)
-                        hashable = hashable.encode('utf-8')
+                        if self.hasher is hash:
+                            hashable = self.obj
+                        else:
+                            hashable = "{}:{}".format(type(self.obj).__name__, self.obj)
+                            hashable = hashable.encode('utf-8')
+                            # TODO: Why do we include the type in the hashable for "real" hashes but not for the python default one?
                     elif isinstance(self.obj, bytes):
                         hashable = type(self.obj).__name__.encode('utf-8') + b":" + self.obj
                 else:  # pragma: no cover
                     if isinstance(self.obj, unicode):
                         hashable = u"{}:{}".format(type(self.obj).__name__, self.obj)
-                        hashable = hashable.encode('utf-8')
+                        hashable = conditional_encode(hashable)
                     elif isinstance(self.obj, str):
                         hashable = type(self.obj).__name__ + ":" + self.obj
 
