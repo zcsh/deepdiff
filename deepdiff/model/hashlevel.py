@@ -5,7 +5,7 @@ from collections import Iterable
 from copy import copy
 
 from .baselevel import BaseLevel
-from ..helper import encode_n_hash, strings, numbers
+from ..helper import encode_n_hash, just_hash, py3, strings, numbers
 from . import repetition, skipped
 
 
@@ -305,7 +305,10 @@ class HashLevel(BaseLevel):
 
     def text_view_hash(self):
         """
-        TODO for text view
+        Create a bunch of hash values for this object as well as most of its children
+        which serves as result in text view.
+        Note rules for creating this text view hash differ from those used for the
+        single hash value that self.hash() generates due to backwards compatibility.
         :rtype: str
         """
         if self.status is repetition:
@@ -315,63 +318,96 @@ class HashLevel(BaseLevel):
 
         self.mark_repetitions()  # for ignore_repetition only
 
-        # TODO: use .additional['objtype'] for everything instead of rechecking
-        # this of course requires that those'll be set consistently by DeepHash
-        # or, even better, DeepBase
+        # TODO (maybe): use .additional['objtype'] for everything instead of rechecking.
+        # This of course requires that those will be set consistently by DeepHash
+        # or, even better, DeepBase.
 
-        # Do we need to include the child relationship param in the text result?
-        want_param = False  # will be set to True for types which need this
-        # e.g. dict keys will be included
+        if self.down is None:  # Are we a leaf node?
+            content = None
+            # This will contain the hash value for this object.
+            # For some types (e.g. int) we just use the raw value instead of actually hashing.
 
-        # Do we want to sort results alphabetically?
-        want_sort = False  # will be set to True for types which need this
-        # We mostly don't need this and for some types, e.g. list, this is prohibitive.
-        # For example, we do want to sort dicts though
+            # prepare leaf hash
+            # Note this needs a different format than we have in self.leaf_hash
+            if isinstance(self.obj, strings):
 
-        if isinstance(self.obj, strings):
-            frame = "str:%s"
+                #frame = type(self.obj).__name__ + ":%s"
+                # TODO: Line above causes tests.test_hash_text.DeepHashSHA1TestCase.test_bytecode to fail
+                # because it expects the reported type to be str.
+                # We still use "bytes" as part of the hashable string, though.
+                # Why is that?
+                frame = "str:%s"
 
-        elif isinstance(self.obj, numbers):
-            frame = self.additional['objtype'] + ":%s"
+                if py3:
+                    if isinstance(self.obj, str):
+                        hashable = "{}:{}".format(type(self.obj).__name__, self.obj)
+                        hashable = hashable.encode('utf-8')
+                    elif isinstance(self.obj, bytes):
+                        hashable = type(self.obj).__name__.encode('utf-8') + b":" + self.obj
+                else:  # pragma: no cover
+                    if isinstance(self.obj, unicode):
+                        hashable = u"{}:{}".format(type(self.obj).__name__, self.obj)
+                        hashable = hashable.encode('utf-8')
+                    elif isinstance(self.obj, str):
+                        hashable = type(self.obj).__name__ + ":" + self.obj
 
-        elif isinstance(self.obj, MutableMapping):
-            frame = "dict:{%s}"
-            want_param = True
-            want_sort = True
+            elif isinstance(self.obj, numbers):
+                frame = self.additional['objtype'] + ":%s"
+                content = str(self.leaf_hash)  # note: it's more of a coincidence that leaf_hash
+                                                # is actually what we need for text view here
+            else:  # pragma: no cover
+                return ""  # TODO: should not happen... as strings and numbers actually all possible leafs?
 
-        elif isinstance(self.obj, tuple):
-            if self.additional['objtype'] == 'tuple':
-                frame = "tuple:%s"
-                want_sort = True
-                # Why do we sort tuples in text view?
-                # Tuples are ordered containers. This is basically a collision.
-            elif self.additional['objtype'] == 'namedtuple':
-                frame = "ntdict:{%s}"
+            if content is None:
+                content = just_hash(hashable, self.hasher)
+
+        else:  # We're not a leaf node. In other words, we're a container.
+
+            # Do we need to include the child relationship param in the text result?
+            want_param = False  # will be set to True for types which need this
+            # e.g. dict keys will be included
+
+            # Do we want to sort results alphabetically?
+            want_sort = False  # will be set to True for types which need this
+            # We mostly don't need this and for some types, e.g. list, this is prohibitive.
+            # For example, we do want to sort dicts though
+
+            if isinstance(self.obj, MutableMapping):
+                frame = "dict:{%s}"
                 want_param = True
                 want_sort = True
 
-        elif isinstance(self.obj, (set, frozenset)):
-            frame = "set:%s"
+            elif isinstance(self.obj, tuple):
+                if self.additional['objtype'] == 'tuple':
+                    frame = "tuple:%s"
+                    want_sort = True
+                    # TODO: Why do we sort tuples in text view?
+                    # Tuples are ordered containers. This is basically a collision.
+                elif self.additional['objtype'] == 'namedtuple':
+                    frame = "ntdict:{%s}"
+                    want_param = True
+                    want_sort = True
 
-        elif isinstance(self.obj, Iterable):
-            frame = "list:%s"
-            want_sort = True
-            # Why do we sort list objects in text view?
-            # Lists are ordered containers. This is basically a collision.
+            elif isinstance(self.obj, (set, frozenset)):
+                frame = "set:%s"
 
-        else:
-            frame = "objdict:{%s}"
-            want_param = True
-            want_sort = True
+            elif isinstance(self.obj, Iterable):
+                frame = "list:%s"
+                want_sort = True
+                # TODO: Why do we sort list objects in text view?
+                # Lists are ordered containers. This is basically a collision.
 
-        if want_param:
-            sep_items = ";"
-        else:
-            sep_items = ','
+            else:
+                frame = "objdict:{%s}"
+                want_param = True
+                want_sort = True
 
-        if self.leaf_hash is not None:
-            contents = [str(self.leaf_hash)]
-        else:
+            # sort out some implications
+            if want_param:
+                sep_items = ";"
+            else:
+                sep_items = ','
+
             contents = []
             for branch in self.all_branches():
                 if "ignore_repetition" in self.additional and self.additional["ignore_repetition"] and \
@@ -383,10 +419,10 @@ class HashLevel(BaseLevel):
                         param_str = branch.child_rel.param_hash["hash"].text_view_hash()
                         subresult = param_str + ":" + subresult
                     contents.append(subresult)
-        if want_sort:
-            contents.sort()
+            if want_sort:
+                contents.sort()
 
-        content = sep_items.join(contents)
+            content = sep_items.join(contents)
 
         result = frame % content
         return result

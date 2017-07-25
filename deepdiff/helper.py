@@ -74,6 +74,13 @@ def encode_n_hash(obj, func):
         return func(obj).hexdigest()
 
 
+def just_hash(obj, func):
+    if func is hash:
+        return str(hash(obj))
+    else:
+        return func(obj).hexdigest()
+
+
 class ListItemRemovedOrAdded(object):  # pragma: no cover
     """Class of conditions to be checked"""
     pass
