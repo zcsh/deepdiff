@@ -67,7 +67,8 @@ class DeepHash(DeepBase, dict):
 
         # Prepare result tree, perform the actual hashing and clean up
         self.tree = HashTreeResult()
-        root = HashLevel([obj])
+        root = HashLevel(objs=[obj],
+                         hasher=hasher)
         root.additional["ignore_repetition"] = self.ignore_repetition  # TODO move somewhere else
         root.hash_function = hasher
         self.__hash(root, parents_ids=frozenset({id(obj)}))
