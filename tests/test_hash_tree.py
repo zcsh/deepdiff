@@ -301,6 +301,13 @@ class DeepHashTreeTestCase(unittest.TestCase):
         hash2 = DeepHash(t2, view='tree', exclude_paths={"root[0]['b']"})
         self.assertEqual(hash1["hash"].hash(), hash2["hash"].hash())
 
+    def test_set_of_none(self):
+        t1 = set()
+        t2 = set([None])
+        hash1 = DeepHash(t1, view='tree')
+        hash2 = DeepHash(t2, view='tree')
+        self.assertNotEqual(hash1["hash"].hash(), hash2["hash"].hash())
+
 
 # TODO: add more tests (dict at least)
 
