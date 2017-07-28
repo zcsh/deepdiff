@@ -334,6 +334,20 @@ class DeepHashTextTestCase(unittest.TestCase):
         result = DeepHash(obj, exclude_types={logging.Logger})
         self.assertTrue(id(l1) not in result)
 
+    def test_list_of_none(self):
+        t1 = [1, 2]
+        t2 = [1, 2, None]
+        hash1 = DeepHash(t1)
+        hash2 = DeepHash(t2)
+        self.assertNotEqual(hash1[id(t1)], hash2[id(t2)])
+
+    def test_set_of_none(self):
+        t1 = set([1, 2])
+        t2 = set([1, 2, None])
+        hash1 = DeepHash(t1)
+        hash2 = DeepHash(t2)
+        self.assertNotEqual(hash1[id(t1)], hash2[id(t2)])
+
 #    def test_hash_custom_object_single_attr(self):
 #        obj = CustomClass("vegan")
 #        result = DeepHash(obj)
