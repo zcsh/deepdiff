@@ -38,6 +38,8 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 
 ID_PREFIX = '!>*id'
 
+MAGIC_METHODS_TO_LOOK_UP = {'__slots__', '__init__'}
+
 
 def short_repr(item, max_length=15):
     """Short representation of item if it is too long"""

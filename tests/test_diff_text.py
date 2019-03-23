@@ -1023,14 +1023,16 @@ class TestDeepDiffText:
         t1, t2 = self.get_custom_object_with_added_removed_methods()
         ddiff = DeepDiff(t1, t2)
 
-        result = {'attribute_added': {'root.method_a', 'root.method_b'}}
+        method_type = type(t1.method_a)
+        func_type = type(t2.method_b)
+        result = {'type_changes': {'root.method_a': {'old_type': method_type, 'new_type': func_type, 'old_value': t1.method_a, 'new_value': t2.method_a}}, 'attribute_added': ['root.method_b']}
         assert result == ddiff
 
     def test_custom_objects_add_and_remove_method_verbose(self):
         t1, t2 = self.get_custom_object_with_added_removed_methods()
         ddiff = DeepDiff(t1, t2, verbose_level=2)
-        assert 'root.method_a' in ddiff['attribute_added']
         assert 'root.method_b' in ddiff['attribute_added']
+        assert 'root.method_a' not in ddiff['attribute_added']
 
     def test_set_of_custom_objects(self):
         member1 = CustomClass(13, 37)
@@ -1071,6 +1073,36 @@ class TestDeepDiffText:
         tacos = [taco]
 
         assert not DeepDiff(burritos, tacos, ignore_type_in_groups=[(Taco, Burrito)], ignore_order=True)
+
+    def test_attribute_change_customclass(self):
+        class MyClass:
+            a = 1
+            def __init__(self, b):
+                self.b = b
+        t1 = MyClass('foo')
+        t2 = MyClass('bar')
+        result = {
+            'values_changed': {
+                'root.b': {
+                    'old_value': 'foo',
+                    'new_value': 'bar',
+                }
+            }
+        }
+        assert result == DeepDiff(t1, t2)
+
+    def test_attribute_change_on_exception(self):
+        t1 = KeyError('foo')
+        t2 = KeyError('bar')
+        result = {
+            'values_changed': {
+                'root.args[0]': {
+                    'old_value': 'foo',
+                    'new_value': 'bar',
+                }
+            }
+        }
+        assert result == DeepDiff(t1, t2)
 
     def test_loop(self):
         class LoopTest(object):

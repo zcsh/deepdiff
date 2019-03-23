@@ -158,7 +158,8 @@ class DeepHash(dict, Base):
             if is_namedtuple:
                 obj = obj._asdict()
             else:
-                obj = obj.__dict__
+                obj = {i: getattr(obj, i) for i in dir(obj)
+                       if not (i.startswith('__') and i.endswith('__'))}
         except AttributeError:
             try:
                 obj = {i: getattr(obj, i) for i in obj.__slots__}

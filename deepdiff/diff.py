@@ -23,7 +23,8 @@ from ordered_set import OrderedSet
 from deepdiff.helper import (strings, bytes_type, numbers, ListItemRemovedOrAdded, notpresent,
                              IndexedHash, Verbose, unprocessed, json_convertor_default, add_to_frozen_set,
                              convert_item_or_items_into_set_else_none, get_type,
-                             convert_item_or_items_into_compiled_regexes_else_none, current_dir)
+                             convert_item_or_items_into_compiled_regexes_else_none, current_dir,
+                             MAGIC_METHODS_TO_LOOK_UP)
 from deepdiff.model import RemapDict, ResultDict, TextResult, TreeResult, DiffLevel
 from deepdiff.model import DictRelationship, AttributeRelationship
 from deepdiff.model import SubscriptableIterableRelationship, NonSubscriptableIterableRelationship, SetRelationship
@@ -55,6 +56,7 @@ class DeepDiff(ResultDict, Base):
                  ignore_type_in_groups=None,
                  ignore_string_type_changes=False,
                  ignore_numeric_type_changes=False,
+                 ignore_magic_methods=True,
                  verbose_level=1,
                  view=TEXT_VIEW,
                  hasher=DeepHash.murmur3_128bit,
@@ -64,8 +66,8 @@ class DeepDiff(ResultDict, Base):
                 "The following parameter(s) are not valid: %s\n"
                 "The valid parameters are ignore_order, report_repetition, significant_digits, "
                 "exclude_paths, exclude_types, exclude_regex_paths, ignore_type_in_groups, "
-                "ignore_string_type_changes, ignore_numeric_type_changes, verbose_level, view, "
-                "and hasher.") % ', '.join(kwargs.keys()))
+                "ignore_string_type_changes, ignore_numeric_type_changes, ignore_magic_methods, "
+                "verbose_level, view, and hasher.") % ', '.join(kwargs.keys()))
 
         self.ignore_order = ignore_order
         self.ignore_type_in_groups = self.get_ignore_types_in_groups(
@@ -78,6 +80,7 @@ class DeepDiff(ResultDict, Base):
         self.exclude_types_tuple = tuple(exclude_types) if exclude_types else None  # we need tuple for checking isinstance
         self.ignore_string_type_changes = ignore_string_type_changes
         self.ignore_numeric_type_changes = ignore_numeric_type_changes
+        self.ignore_magic_methods = ignore_magic_methods
         self.hashes = {}
         self.hasher = hasher
 
@@ -177,8 +180,12 @@ class DeepDiff(ResultDict, Base):
                 t1 = level.t1._asdict()
                 t2 = level.t2._asdict()
             else:
-                t1 = level.t1.__dict__
-                t2 = level.t2.__dict__
+                import pytest; pytest.set_trace()
+                # Object comparison fix from 54c7267d
+                t1 = {i: getattr(level.t1, i) for i in dir(level.t1)
+                      if (not (i.startswith('__') and i.endswith('__')) or i in MAGIC_METHODS_TO_LOOK_UP)}
+                t2 = {i: getattr(level.t2, i) for i in dir(level.t2)
+                      if (not (i.startswith('__') and i.endswith('__')) or i in MAGIC_METHODS_TO_LOOK_UP)}
         except AttributeError:
             try:
                 t1 = self.__dict_from_slots(level.t1)
