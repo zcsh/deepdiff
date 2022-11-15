@@ -13,3 +13,4 @@ watchdog==2.1.6
 Sphinx==4.2.0
 sphinx-sitemap==2.2.0
 flake8==4.0.1
+setuptools>=65.5.1 # not directly required, pinned by Snyk to avoid a vulnerability
